@@ -1,0 +1,115 @@
+# ==============================
+# ENVIRONMENT VARIABLES & SECRETS
+# ==============================
+.env
+.env.*
+!.env.example
+!.env.template
+*.pem
+*.key
+
+# ==============================
+# PYTHON ENVIRONMENTS
+# ==============================
+.venv/
+venv/
+env/
+ENV/
+**/.venv/
+**/venv/
+**/env/
+
+# ==============================
+# PYTHON CACHE
+# ==============================
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# ==============================
+# LOCAL DATABASES & BACKUPS
+# ==============================
+*.db
+*.sqlite
+*.sqlite3
+*.dump
+*.sql
+*.bak
+*.backup
+backups/
+**/backups/
+
+# ==============================
+# DATASETS
+# ==============================
+dataset/
+datasets/
+**/dataset/
+**/datasets/
+Skin Cancer MNIST HAM10000/
+
+# ==============================
+# MODEL WEIGHTS & TRAINING OUTPUT
+# ==============================
+*.pth
+*.pt
+*.ckpt
+*.h5
+*.keras
+*.onnx
+*.safetensors
+*.pkl
+*.joblib
+runs/
+results/
+wandb/
+mlruns/
+
+# ==============================
+# LARGE ARCHIVES
+# ==============================
+*.zip
+*.7z
+*.rar
+*.tar
+*.tar.gz
+*.tgz
+
+# ==============================
+# LOGS & TEMPORARY FILES
+# ==============================
+*.log
+*.tmp
+*.temp
+
+# ==============================
+# EDITORS
+# ==============================
+.vscode/
+.idea/
+
+# ==============================
+# NODE / FRONTEND
+# ==============================
+node_modules/
+dist/
+build/
+coverage/
+
+# ==============================
+# OPERATING SYSTEM FILES
+# ==============================
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# Alternate virtual environment names
+.venv*/
+venv*/
+env*/
+**/.venv*/
+**/venv*/
+**/env*/
