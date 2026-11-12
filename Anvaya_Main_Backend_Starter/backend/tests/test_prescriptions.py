@@ -5,6 +5,9 @@ from app.models.appointment import Appointment
 from app.models.doctor_profile import DoctorProfile
 from app.models.patient_profile import PatientProfile
 from app.models.user import User
+from sqlalchemy import select
+
+from app.models.audit_log import AuditLog
 
 
 PRESCRIPTION_ENDPOINT = "/api/v1/prescriptions"
@@ -460,3 +463,75 @@ def test_prescription_requires_at_least_one_medicine(
     )
 
     assert response.status_code == 422
+
+# =====================================================
+# 12. PRESCRIPTION CREATION CREATES AUDIT LOG
+# =====================================================
+
+def test_prescription_creation_creates_audit_log(
+    client,
+    db_session,
+    doctor_headers,
+    past_booked_appointment,
+):
+    # Complete the consultation first.
+    complete_test_appointment(
+        client,
+        doctor_headers,
+        past_booked_appointment,
+    )
+
+    # Create prescription.
+    response = create_test_prescription(
+        client,
+        doctor_headers,
+        past_booked_appointment,
+    )
+
+    assert response.status_code == 201, response.text
+
+    prescription_id = response.json()["id"]
+
+    # Retrieve doctor information.
+    doctor_profile = db_session.get(
+        DoctorProfile,
+        past_booked_appointment.doctor_profile_id,
+    )
+
+    assert doctor_profile is not None
+
+    # Refresh session state before checking audit records.
+    db_session.expire_all()
+
+    audit_log = db_session.scalar(
+        select(AuditLog).where(
+            AuditLog.event_type == "prescription.created",
+            AuditLog.resource_id == prescription_id,
+        )
+    )
+
+    # Verify audit event exists.
+    assert audit_log is not None
+
+    assert audit_log.outcome == "success"
+    assert audit_log.resource_type == "prescription"
+
+    # Verify actor and ownership information.
+    assert audit_log.actor_user_id == doctor_profile.user_id
+
+    assert audit_log.patient_profile_id == (
+        past_booked_appointment.patient_profile_id
+    )
+
+    assert audit_log.doctor_profile_id == doctor_profile.id
+
+    # Verify safe audit metadata.
+    assert audit_log.details["appointment_id"] == str(
+        past_booked_appointment.id
+    )
+
+    assert audit_log.details["medicine_item_count"] == 2
+
+    # Clinical information must not be stored in audit metadata.
+    assert "medicine_name" not in audit_log.details
+    assert "dosage" not in audit_log.details

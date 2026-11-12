@@ -4,7 +4,9 @@ from datetime import datetime, timezone
 from app.models.consent_record import ConsentRecord
 from app.models.patient_profile import PatientProfile
 from app.models.user import User
+from sqlalchemy import select
 
+from app.models.audit_log import AuditLog
 
 CONSENT_ENDPOINT = "/api/v1/consents"
 
@@ -315,3 +317,105 @@ def test_duplicate_data_scopes_are_rejected(
     )
 
     assert response.status_code == 422
+
+# =====================================================
+# 11. CONSENT GRANT CREATES AUDIT LOG
+# =====================================================
+
+def test_patient_consent_grant_creates_audit_log(
+    client,
+    db_session,
+    patient_headers,
+    approved_doctor,
+):
+    response = client.post(
+        CONSENT_ENDPOINT,
+        json=make_consent_payload(
+            approved_doctor["profile"].id
+        ),
+        headers=patient_headers,
+    )
+
+    assert response.status_code == 201
+
+    consent_id = response.json()["id"]
+
+    # Refresh session state before reading the audit record.
+    db_session.expire_all()
+
+    audit_log = db_session.scalar(
+        select(AuditLog).where(
+            AuditLog.event_type == "consent.granted",
+            AuditLog.resource_id == consent_id,
+        )
+    )
+
+    assert audit_log is not None
+    assert audit_log.outcome == "success"
+    assert audit_log.resource_type == "consent"
+    assert audit_log.doctor_profile_id == approved_doctor["profile"].id
+    assert audit_log.details["scope_count"] == 3
+    assert set(audit_log.details["scopes"]) == {
+        "diagnosis",
+        "symptoms",
+        "visit_summary",
+    }
+
+
+# =====================================================
+# 12. CONSENT REVOCATION CREATES AUDIT LOG
+# =====================================================
+
+def test_patient_consent_revocation_creates_audit_log(
+    client,
+    db_session,
+    patient_headers,
+    approved_doctor,
+):
+    # First grant consent.
+    grant_response = client.post(
+        CONSENT_ENDPOINT,
+        json=make_consent_payload(
+            approved_doctor["profile"].id
+        ),
+        headers=patient_headers,
+    )
+
+    assert grant_response.status_code == 201
+
+    consent_id = grant_response.json()["id"]
+
+    # Then revoke consent.
+    revoke_response = client.patch(
+        f"{CONSENT_ENDPOINT}/{consent_id}/revoke",
+        headers=patient_headers,
+    )
+
+    assert revoke_response.status_code == 200
+    assert revoke_response.json()["is_active"] is False
+
+    db_session.expire_all()
+
+    grant_log = db_session.scalar(
+        select(AuditLog).where(
+            AuditLog.event_type == "consent.granted",
+            AuditLog.resource_id == consent_id,
+        )
+    )
+
+    revoke_log = db_session.scalar(
+        select(AuditLog).where(
+            AuditLog.event_type == "consent.revoked",
+            AuditLog.resource_id == consent_id,
+        )
+    )
+
+    # Both events must exist.
+    assert grant_log is not None
+    assert revoke_log is not None
+
+    # Verify revocation audit details.
+    assert revoke_log.outcome == "success"
+    assert revoke_log.resource_type == "consent"
+    assert revoke_log.doctor_profile_id == approved_doctor["profile"].id
+    assert revoke_log.details["scope_count"] == 3

@@ -1,4 +1,5 @@
 
+from typing import Literal
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Query
@@ -22,11 +23,75 @@ from app.schemas.health_record import (
     DoctorSharedHealthRecordListResponse,
 )
 
+from app.services.audit_service import add_audit_log
+
 
 router = APIRouter(
     prefix="/health-records",
     tags=["Health Records"],
 )
+
+
+# =========================================================
+# AUDIT HELPER - DOCTOR EHR ACCESS
+# =========================================================
+
+def _log_doctor_ehr_access(
+    db: Session,
+    *,
+    actor_user_id: UUID,
+    requested_patient_profile_id: UUID,
+    doctor_profile_id: UUID | None,
+    patient_profile_id: UUID | None,
+    scopes: list[HealthDataScope],
+    outcome: Literal["success", "denied"],
+    reason: str,
+    limit: int,
+    offset: int,
+    total_record_count: int | None = None,
+    returned_record_count: int | None = None,
+) -> None:
+    """
+    Record doctor access attempts for patient health records.
+
+    Only access metadata is stored.
+    Clinical values are never copied into audit details.
+
+    The caller's session commits the audit entry so that
+    denied attempts remain recorded before HTTPException.
+    """
+
+    details = {
+        "reason": reason,
+        "requested_scopes": list(scopes),
+        "limit": limit,
+        "offset": offset,
+    }
+
+    if total_record_count is not None:
+        details["total_record_count"] = total_record_count
+
+    if returned_record_count is not None:
+        details["returned_record_count"] = returned_record_count
+
+    add_audit_log(
+        db,
+        actor_user_id=actor_user_id,
+        patient_profile_id=patient_profile_id,
+        doctor_profile_id=doctor_profile_id,
+        event_type=(
+            "ehr.records.accessed"
+            if outcome == "success"
+            else "ehr.records.access_denied"
+        ),
+        resource_type="patient_health_records",
+        resource_id=requested_patient_profile_id,
+        outcome=outcome,
+        details=details,
+    )
+
+    # Commit the audit event independently of the HTTP response.
+    db.commit()
 
 
 # =========================================================
@@ -85,7 +150,7 @@ def get_my_health_records(
 
 # =========================================================
 # 2. GET PATIENT HEALTH RECORDS - DOCTOR
-# CONSENT-PROTECTED ACCESS
+# CONSENT-PROTECTED ACCESS + AUDIT LOGGING
 # =========================================================
 
 @router.get(
@@ -118,20 +183,48 @@ def get_patient_health_records_for_doctor(
     )
 
     if doctor_profile is None:
+
+        _log_doctor_ehr_access(
+            db,
+            actor_user_id=current_user.id,
+            requested_patient_profile_id=patient_profile_id,
+            doctor_profile_id=None,
+            patient_profile_id=None,
+            scopes=scopes,
+            outcome="denied",
+            reason="doctor_profile_not_found",
+            limit=limit,
+            offset=offset,
+        )
+
         raise HTTPException(
             status_code=404,
             detail="Doctor profile not found.",
         )
 
-    # Only approved doctors may access patient records.
+    # STEP 2: Only approved doctors may access patient records.
 
     if doctor_profile.verification_status != "approved":
+
+        _log_doctor_ehr_access(
+            db,
+            actor_user_id=current_user.id,
+            requested_patient_profile_id=patient_profile_id,
+            doctor_profile_id=doctor_profile.id,
+            patient_profile_id=None,
+            scopes=scopes,
+            outcome="denied",
+            reason="doctor_not_approved",
+            limit=limit,
+            offset=offset,
+        )
+
         raise HTTPException(
             status_code=403,
             detail="Only approved doctors can access patient records.",
         )
 
-    # STEP 2: Ensure the requested patient exists.
+    # STEP 3: Ensure the requested patient exists.
 
     patient_profile = db.scalar(
         select(PatientProfile).where(
@@ -140,51 +233,110 @@ def get_patient_health_records_for_doctor(
     )
 
     if patient_profile is None:
+
+        _log_doctor_ehr_access(
+            db,
+            actor_user_id=current_user.id,
+            requested_patient_profile_id=patient_profile_id,
+            doctor_profile_id=doctor_profile.id,
+            patient_profile_id=None,
+            scopes=scopes,
+            outcome="denied",
+            reason="patient_profile_not_found",
+            limit=limit,
+            offset=offset,
+        )
+
         raise HTTPException(
             status_code=404,
             detail="Patient profile not found.",
         )
 
-    # STEP 3: Reject duplicate requested scopes.
+    # STEP 4: Reject duplicate requested scopes.
 
     if len(scopes) != len(set(scopes)):
+
+        _log_doctor_ehr_access(
+            db,
+            actor_user_id=current_user.id,
+            requested_patient_profile_id=patient_profile_id,
+            doctor_profile_id=doctor_profile.id,
+            patient_profile_id=patient_profile.id,
+            scopes=scopes,
+            outcome="denied",
+            reason="duplicate_requested_scopes",
+            limit=limit,
+            offset=offset,
+        )
+
         raise HTTPException(
             status_code=422,
             detail="Duplicate health-information scopes are not allowed.",
         )
 
-    # STEP 4: Find active consent for this exact
+    # STEP 5: Find active consent for this exact
     # patient and authenticated doctor.
+    #
+    # Row locking prevents a concurrent revocation from
+    # changing consent while the protected access is checked.
 
     consent = db.scalar(
-    select(ConsentRecord)
-    .where(
-        ConsentRecord.patient_profile_id == patient_profile.id,
-        ConsentRecord.doctor_profile_id == doctor_profile.id,
-        ConsentRecord.is_active.is_(True),
+        select(ConsentRecord)
+        .where(
+            ConsentRecord.patient_profile_id == patient_profile.id,
+            ConsentRecord.doctor_profile_id == doctor_profile.id,
+            ConsentRecord.is_active.is_(True),
+        )
+        .with_for_update()
     )
-    .with_for_update()
-)
 
     if consent is None:
+
+        _log_doctor_ehr_access(
+            db,
+            actor_user_id=current_user.id,
+            requested_patient_profile_id=patient_profile_id,
+            doctor_profile_id=doctor_profile.id,
+            patient_profile_id=patient_profile.id,
+            scopes=scopes,
+            outcome="denied",
+            reason="active_consent_missing",
+            limit=limit,
+            offset=offset,
+        )
+
         raise HTTPException(
             status_code=403,
             detail="Active patient consent is required.",
         )
 
-    # STEP 5: Verify that consent covers every
+    # STEP 6: Verify that consent covers every
     # requested health-information field.
 
     permitted_scopes = set(consent.data_scopes)
     requested_scopes = set(scopes)
 
     if not requested_scopes.issubset(permitted_scopes):
+
+        _log_doctor_ehr_access(
+            db,
+            actor_user_id=current_user.id,
+            requested_patient_profile_id=patient_profile_id,
+            doctor_profile_id=doctor_profile.id,
+            patient_profile_id=patient_profile.id,
+            scopes=scopes,
+            outcome="denied",
+            reason="requested_scopes_not_covered",
+            limit=limit,
+            offset=offset,
+        )
+
         raise HTTPException(
             status_code=403,
             detail="Consent does not cover all requested information.",
         )
 
-    # STEP 6: Fetch only this patient's health records.
+    # STEP 7: Fetch only this patient's health records.
 
     patient_filter = (
         HealthRecord.patient_profile_id == patient_profile.id
@@ -205,7 +357,7 @@ def get_patient_health_records_for_doctor(
         .offset(offset)
     ).all()
 
-    # STEP 7: Return only the fields explicitly
+    # STEP 8: Return only the fields explicitly
     # authorized by the patient's consent.
 
     items = []
@@ -224,6 +376,24 @@ def get_patient_health_records_for_doctor(
                 data=authorized_data,
             )
         )
+
+    # STEP 9: Record successful EHR access.
+    # No diagnosis, symptoms or clinical notes are logged.
+
+    _log_doctor_ehr_access(
+        db,
+        actor_user_id=current_user.id,
+        requested_patient_profile_id=patient_profile.id,
+        doctor_profile_id=doctor_profile.id,
+        patient_profile_id=patient_profile.id,
+        scopes=scopes,
+        outcome="success",
+        reason="consent_verified",
+        limit=limit,
+        offset=offset,
+        total_record_count=total,
+        returned_record_count=len(records),
+    )
 
     return DoctorSharedHealthRecordListResponse(
         items=items,

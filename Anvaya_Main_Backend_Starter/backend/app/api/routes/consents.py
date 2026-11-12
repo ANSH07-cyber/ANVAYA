@@ -1,3 +1,4 @@
+
 from uuid import UUID
 from datetime import datetime, timezone
 
@@ -8,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import require_roles
 from app.db.session import get_db
+from app.services.audit_service import add_audit_log
 
 from app.models.consent_record import ConsentRecord
 from app.models.doctor_profile import DoctorProfile
@@ -76,7 +78,7 @@ def grant_consent(
             detail="Approved doctor not found.",
         )
 
-    # Do not allow multiple active consent records
+    # Prevent multiple active consent records
     # for the same patient-doctor pair.
 
     existing_consent = db.scalar(
@@ -107,6 +109,28 @@ def grant_consent(
 
     try:
         db.add(consent)
+
+        # Insert consent and generate its UUID.
+        db.flush()
+
+        # Create audit event for successful consent grant.
+        # Consent and audit event share the same transaction.
+
+        add_audit_log(
+            db,
+            actor_user_id=current_user.id,
+            patient_profile_id=patient_profile.id,
+            doctor_profile_id=doctor_profile.id,
+            event_type="consent.granted",
+            resource_type="consent",
+            resource_id=consent.id,
+            outcome="success",
+            details={
+                "scopes": list(payload.data_scopes),
+                "scope_count": len(payload.data_scopes),
+            },
+        )
+
         db.commit()
         db.refresh(consent)
 
@@ -188,7 +212,8 @@ def revoke_consent(
     db: Session = Depends(get_db),
 ) -> ConsentRead:
 
-    # Import UUID inside this module if not already imported.
+    # Find and lock the authenticated patient's profile.
+
     patient_profile = db.scalar(
         select(PatientProfile)
         .where(PatientProfile.user_id == current_user.id)
@@ -200,6 +225,8 @@ def revoke_consent(
             status_code=404,
             detail="Patient profile not found.",
         )
+
+    # Fetch only the consent record belonging to this patient.
 
     consent = db.scalar(
         select(ConsentRecord)
@@ -222,10 +249,30 @@ def revoke_consent(
             detail="Consent has already been revoked.",
         )
 
+    # Revoke consent.
+
     consent.is_active = False
     consent.revoked_at = datetime.now(timezone.utc)
 
     try:
+        # Create audit event for successful consent revocation.
+        # Both changes are committed in the same transaction.
+
+        add_audit_log(
+            db,
+            actor_user_id=current_user.id,
+            patient_profile_id=patient_profile.id,
+            doctor_profile_id=consent.doctor_profile_id,
+            event_type="consent.revoked",
+            resource_type="consent",
+            resource_id=consent.id,
+            outcome="success",
+            details={
+                "scopes": list(consent.data_scopes),
+                "scope_count": len(consent.data_scopes),
+            },
+        )
+
         db.commit()
         db.refresh(consent)
 

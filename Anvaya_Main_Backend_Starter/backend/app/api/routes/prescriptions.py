@@ -22,6 +22,8 @@ from app.schemas.prescription import (
     PrescriptionListResponse,
 )
 
+from app.services.audit_service import add_audit_log
+
 
 router = APIRouter(
     prefix="/prescriptions",
@@ -145,11 +147,36 @@ def create_prescription(
         items=prescription_items,
     )
 
-    # STEP 7: Save prescription and all medicine items
-    # in a single database transaction.
+    # STEP 7: Save prescription, medicine items and
+    # audit event in a single database transaction.
 
     try:
         db.add(prescription)
+
+        # Insert prescription and generate its UUID.
+        db.flush()
+
+        # Record successful prescription creation.
+        # Do not store medicine names, dosage or clinical notes
+        # in audit metadata.
+
+        add_audit_log(
+            db,
+            actor_user_id=current_user.id,
+            patient_profile_id=appointment.patient_profile_id,
+            doctor_profile_id=doctor_profile.id,
+            event_type="prescription.created",
+            resource_type="prescription",
+            resource_id=prescription.id,
+            outcome="success",
+            details={
+                "appointment_id": str(appointment.id),
+                "health_record_id": str(health_record.id),
+                "medicine_item_count": len(prescription_items),
+            },
+        )
+
+        # Both prescription and audit entry commit together.
         db.commit()
 
         # Reload prescription with its medicine items.

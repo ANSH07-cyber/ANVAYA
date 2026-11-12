@@ -1,4 +1,6 @@
+from sqlalchemy import select
 
+from app.models.audit_log import AuditLog
 CONSULTATION_PAYLOAD = {
     "visit_summary": "Patient consultation completed. Symptoms assessed and treatment discussed.",
     "chief_complaint": "Recurring headache",
@@ -304,3 +306,117 @@ def test_doctor_cannot_access_patient_without_their_consent(
     assert response.json()["detail"] == (
         "Active patient consent is required."
     )
+
+# =====================================================
+# 7. SUCCESSFUL DOCTOR EHR ACCESS CREATES AUDIT LOG
+# =====================================================
+
+def test_successful_doctor_ehr_access_creates_audit_log(
+    client,
+    db_session,
+    patient_headers,
+    doctor_headers,
+    approved_doctor,
+    past_booked_appointment,
+):
+    # Complete the consultation.
+    complete_test_appointment(
+        client,
+        doctor_headers,
+        past_booked_appointment,
+    )
+
+    # Patient grants access to diagnosis.
+    grant_test_consent(
+        client,
+        patient_headers,
+        approved_doctor["profile"].id,
+        ["diagnosis"],
+    )
+
+    # Doctor accesses the authorized EHR information.
+    response = request_doctor_ehr(
+        client,
+        doctor_headers,
+        past_booked_appointment.patient_profile_id,
+        ["diagnosis"],
+    )
+
+    assert response.status_code == 200
+
+    db_session.expire_all()
+
+    audit_log = db_session.scalar(
+        select(AuditLog).where(
+            AuditLog.event_type == "ehr.records.accessed",
+            AuditLog.resource_id == str(
+                past_booked_appointment.patient_profile_id
+            ),
+            AuditLog.actor_user_id == approved_doctor["profile"].user_id,
+        )
+    )
+
+    assert audit_log is not None
+    assert audit_log.outcome == "success"
+    assert audit_log.resource_type == "patient_health_records"
+    assert audit_log.patient_profile_id == (
+        past_booked_appointment.patient_profile_id
+    )
+    assert audit_log.doctor_profile_id == approved_doctor["profile"].id
+
+    assert audit_log.details["reason"] == "consent_verified"
+    assert audit_log.details["requested_scopes"] == ["diagnosis"]
+    assert audit_log.details["total_record_count"] == 1
+    assert audit_log.details["returned_record_count"] == 1
+
+
+# =====================================================
+# 8. DENIED DOCTOR EHR ACCESS CREATES AUDIT LOG
+# =====================================================
+
+def test_denied_doctor_ehr_access_creates_audit_log(
+    client,
+    db_session,
+    doctor_headers,
+    approved_doctor,
+    past_booked_appointment,
+):
+    # Complete the consultation.
+    # No consent will be granted to the doctor.
+    complete_test_appointment(
+        client,
+        doctor_headers,
+        past_booked_appointment,
+    )
+
+    response = request_doctor_ehr(
+        client,
+        doctor_headers,
+        past_booked_appointment.patient_profile_id,
+        ["diagnosis"],
+    )
+
+    assert response.status_code == 403
+
+    db_session.expire_all()
+
+    audit_log = db_session.scalar(
+        select(AuditLog).where(
+            AuditLog.event_type == "ehr.records.access_denied",
+            AuditLog.resource_id == str(
+                past_booked_appointment.patient_profile_id
+            ),
+            AuditLog.actor_user_id == approved_doctor["profile"].user_id,
+        )
+    )
+
+    assert audit_log is not None
+    assert audit_log.outcome == "denied"
+    assert audit_log.resource_type == "patient_health_records"
+    assert audit_log.patient_profile_id == (
+        past_booked_appointment.patient_profile_id
+    )
+    assert audit_log.doctor_profile_id == approved_doctor["profile"].id
+
+    assert audit_log.details["reason"] == "active_consent_missing"
+    assert audit_log.details["requested_scopes"] == ["diagnosis"]
