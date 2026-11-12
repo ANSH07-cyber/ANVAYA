@@ -11,6 +11,7 @@ from app.api.routes import (
     health,
     health_records,
     patients,
+    prescriptions,
 )
 
 
@@ -74,7 +75,14 @@ api_router.include_router(health_records.router)
 
 
 # =========================================================
-# 9. PATIENT CONSENT MANAGEMENT
+# 9. PATIENT CONSENT
 # =========================================================
 
 api_router.include_router(consents.router)
+
+
+# =========================================================
+# 10. E-PRESCRIPTIONS
+# =========================================================
+
+api_router.include_router(prescriptions.router)

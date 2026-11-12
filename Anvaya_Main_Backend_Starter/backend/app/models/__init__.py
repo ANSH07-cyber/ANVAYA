@@ -5,6 +5,7 @@ from app.models.doctor_profile import DoctorProfile
 from app.models.doctor_availability import DoctorAvailability
 from app.models.health_record import HealthRecord
 from app.models.consent_record import ConsentRecord
+from app.models.prescription import Prescription, PrescriptionItem
 
 __all__ = [
     "User",
@@ -14,4 +15,6 @@ __all__ = [
     "Appointment",
     "HealthRecord",
     "ConsentRecord",
+    "Prescription",
+    "PrescriptionItem",
 ]
