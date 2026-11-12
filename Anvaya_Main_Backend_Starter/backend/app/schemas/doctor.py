@@ -88,3 +88,19 @@ class DoctorReviewListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+class DoctorPublicRead(BaseModel):
+    id: UUID
+    full_name: str
+    specialization: str
+    qualification: str
+    years_experience: int | None
+    clinic_name: str | None
+    consultation_fee: Decimal | None
+    bio: str | None
+
+
+class DoctorPublicListResponse(BaseModel):
+    items: list[DoctorPublicRead]
+    total: int
+    limit: int
+    offset: int
