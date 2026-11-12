@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from uuid import UUID
 from zoneinfo import ZoneInfo
@@ -13,6 +12,7 @@ from app.db.session import get_db
 
 from app.models.appointment import Appointment
 from app.models.doctor_profile import DoctorProfile
+from app.models.health_record import HealthRecord
 from app.models.patient_profile import PatientProfile
 from app.models.user import User
 
@@ -21,10 +21,10 @@ from app.schemas.appointment import (
     AppointmentRead,
     AppointmentListResponse,
     AppointmentReschedule,
-    AppointmentStatusUpdate,
     DoctorAppointmentRead,
     DoctorAppointmentListResponse,
 )
+from app.schemas.health_record import ConsultationCompletion, HealthRecordRead
 
 from app.services.appointment_service import generate_available_slots
 
@@ -533,21 +533,21 @@ def reschedule_my_appointment(
 
 
 # =========================================================
-# 6. MARK APPOINTMENT AS COMPLETED - DOCTOR
+# 6. COMPLETE APPOINTMENT AND CREATE HEALTH RECORD - DOCTOR
 # =========================================================
 
 @router.patch(
     "/{appointment_id}/status",
-    response_model=AppointmentRead,
+    response_model=HealthRecordRead,
 )
 def update_appointment_status(
     appointment_id: UUID,
-    payload: AppointmentStatusUpdate,
+    payload: ConsultationCompletion,
     current_user: User = Depends(require_roles("doctor")),
     db: Session = Depends(get_db),
-) -> AppointmentRead:
+) -> HealthRecordRead:
 
-    # STEP 1: Find the doctor's own profile.
+    # STEP 1: Find and lock the authenticated doctor's own profile.
 
     doctor_profile = db.scalar(
         select(DoctorProfile)
@@ -561,12 +561,12 @@ def update_appointment_status(
             detail="Doctor profile not found.",
         )
 
-    # Only approved doctors may update consultation status.
+    # Only approved doctors may complete consultations.
 
     if doctor_profile.verification_status != "approved":
         raise HTTPException(
             status_code=403,
-            detail="Only approved doctors can update appointment status.",
+            detail="Only approved doctors can complete consultations.",
         )
 
     # STEP 2: Find and lock an appointment belonging
@@ -592,7 +592,7 @@ def update_appointment_status(
     if appointment.status != "booked":
         raise HTTPException(
             status_code=409,
-            detail="Only booked appointments can be marked as completed.",
+            detail="Only booked appointments can be completed.",
         )
 
     # STEP 4: Appointment must have started.
@@ -605,22 +605,37 @@ def update_appointment_status(
     if appointment_start > datetime.now(IST):
         raise HTTPException(
             status_code=409,
-            detail="A future appointment cannot be marked as completed.",
+            detail="A future appointment cannot be completed.",
         )
 
-    # STEP 5: Update appointment status.
+    # STEP 5: Build the consultation-linked health record.
 
-    appointment.status = payload.status
+    health_record = HealthRecord(
+        patient_profile_id=appointment.patient_profile_id,
+        doctor_profile_id=doctor_profile.id,
+        appointment_id=appointment.id,
+        visit_date=appointment.appointment_date,
+        **payload.model_dump(),
+    )
+
+    # STEP 6: Save the health record and mark the appointment completed
+    # in one transaction. Either both changes persist or neither does.
+
+    appointment.status = "completed"
+    db.add(health_record)
 
     try:
         db.commit()
-        db.refresh(appointment)
+        db.refresh(health_record)
 
     except IntegrityError:
         db.rollback()
         raise HTTPException(
             status_code=409,
-            detail="Appointment status could not be updated.",
+            detail=(
+                "Consultation could not be saved or the appointment "
+                "could not be completed."
+            ),
         )
 
-    return appointment
+    return health_record

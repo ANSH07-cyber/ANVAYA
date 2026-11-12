@@ -1,4 +1,4 @@
-
+from uuid import UUID
 from concurrent.futures import ThreadPoolExecutor
 from threading import Barrier
 from datetime import datetime, time, timedelta
@@ -7,7 +7,7 @@ from zoneinfo import ZoneInfo
 import pytest
 
 from fastapi.testclient import TestClient
-from sqlalchemy import create_engine, text
+from sqlalchemy import create_engine, select, text
 from sqlalchemy.orm import sessionmaker
 from sqlalchemy.pool import NullPool
 
@@ -16,6 +16,8 @@ from app.core.config import settings
 from app.core.security import create_access_token
 from app.db.base import Base
 from app.db.session import get_db
+from app.models.appointment import Appointment
+from app.models.consent_record import ConsentRecord
 
 from app.models.user import User
 from app.models.patient_profile import PatientProfile
@@ -386,3 +388,170 @@ def test_concurrent_booking_allows_only_one_patient(
     print("HTTP statuses:", status_codes)
     print("Booked records:", booked_count)
     print("CONCURRENCY TEST: PASSED")
+
+# =========================================================
+# 9. CONCURRENT DOCTOR EHR ACCESS AND CONSENT REVOCATION
+# REAL POSTGRESQL INTEGRATION TEST
+# =========================================================
+
+def test_concurrent_ehr_access_and_consent_revocation(
+    test_engine,
+    postgres_api_override,
+    postgres_session,
+    pg_patient_headers,
+    pg_approved_doctor,
+):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    from fastapi.testclient import TestClient
+
+    # Find the patient created by the existing fixture.
+    patient_profile = postgres_session.scalar(
+        select(PatientProfile)
+        .join(User, User.id == PatientProfile.user_id)
+        .where(User.email == "pg.patient.one@example.com")
+    )
+
+    assert patient_profile is not None
+
+    doctor_profile = pg_approved_doctor["profile"]
+
+    doctor_token = create_access_token(
+        str(pg_approved_doctor["user"].id)
+    )
+
+    doctor_headers = {
+        "Authorization": f"Bearer {doctor_token}"
+    }
+
+    # Create a past appointment for the EHR workflow.
+    appointment = Appointment(
+        patient_profile_id=patient_profile.id,
+        doctor_profile_id=doctor_profile.id,
+        appointment_date=(
+            datetime.now(IST).date() - timedelta(days=1)
+        ),
+        start_time=time(10, 0),
+        end_time=time(10, 30),
+        status="booked",
+        reason="Consent concurrency test",
+    )
+
+    postgres_session.add(appointment)
+    postgres_session.commit()
+    postgres_session.refresh(appointment)
+
+    # Doctor completes the consultation and creates an EHR.
+    consultation_payload = {
+        "visit_summary": (
+            "Patient consultation completed. "
+            "Symptoms assessed and treatment discussed."
+        ),
+        "diagnosis": "PostgreSQL concurrency test diagnosis",
+        "symptoms": "Test symptoms",
+    }
+
+    with TestClient(app) as client:
+        completion_response = client.patch(
+            f"/api/v1/appointments/{appointment.id}/status",
+            json=consultation_payload,
+            headers=doctor_headers,
+        )
+
+    assert completion_response.status_code == 200, (
+        completion_response.text
+    )
+
+    # Patient grants access to the diagnosis field.
+    with TestClient(app) as client:
+        grant_response = client.post(
+            "/api/v1/consents",
+            json={
+                "doctor_profile_id": str(doctor_profile.id),
+                "data_scopes": ["diagnosis"],
+            },
+            headers=pg_patient_headers,
+        )
+
+    assert grant_response.status_code == 201, grant_response.text
+
+    consent_id = grant_response.json()["id"]
+
+    # Launch EHR access and consent revocation simultaneously.
+    barrier = Barrier(2)
+
+    def request_ehr_access():
+        barrier.wait(timeout=15)
+
+        with TestClient(app) as client:
+            return client.get(
+                f"/api/v1/health-records/patient/{patient_profile.id}",
+                params=[("scopes", "diagnosis")],
+                headers=doctor_headers,
+            )
+
+    def revoke_patient_consent():
+        barrier.wait(timeout=15)
+
+        with TestClient(app) as client:
+            return client.patch(
+                f"/api/v1/consents/{consent_id}/revoke",
+                headers=pg_patient_headers,
+            )
+
+    with ThreadPoolExecutor(max_workers=2) as executor:
+
+        access_future = executor.submit(request_ehr_access)
+        revoke_future = executor.submit(revoke_patient_consent)
+
+        access_response = access_future.result(timeout=30)
+        revoke_response = revoke_future.result(timeout=30)
+
+    # Revocation must always succeed.
+    assert revoke_response.status_code == 200, (
+        revoke_response.text
+    )
+
+    assert revoke_response.json()["is_active"] is False
+
+    # The concurrent access may complete before revocation
+    # or be denied after revocation, depending on lock order.
+    assert access_response.status_code in (200, 403), (
+        access_response.text
+    )
+
+    # After both concurrent operations finish, access
+    # must be denied because consent is now revoked.
+    with TestClient(app) as client:
+        final_access_response = client.get(
+            f"/api/v1/health-records/patient/{patient_profile.id}",
+            params=[("scopes", "diagnosis")],
+            headers=doctor_headers,
+        )
+
+    assert final_access_response.status_code == 403
+
+    assert final_access_response.json()["detail"] == (
+        "Active patient consent is required."
+    )
+
+    # Verify the final persisted PostgreSQL consent state.
+    postgres_session.expire_all()
+
+    saved_consent = postgres_session.scalar(
+        select(ConsentRecord).where(
+            ConsentRecord.id == UUID(consent_id)
+        )
+    )
+
+    assert saved_consent is not None
+    assert saved_consent.is_active is False
+    assert saved_consent.revoked_at is not None
+
+    print("\nPOSTGRESQL CONSENT CONCURRENCY RESULTS:")
+    print("Concurrent EHR access:", access_response.status_code)
+    print("Consent revocation:", revoke_response.status_code)
+    print("Final EHR access:", final_access_response.status_code)
+    print("Persisted consent active:", saved_consent.is_active)
+    print("CONSENT CONCURRENCY TEST: PASSED")

@@ -1,4 +1,3 @@
-
 from uuid import uuid4
 
 
@@ -7,9 +6,7 @@ from uuid import uuid4
 # =====================================================
 
 def test_missing_token_returns_401(client):
-    response = client.get(
-        "/api/v1/appointments/me"
-    )
+    response = client.get("/api/v1/appointments/me")
 
     assert response.status_code == 401
 
@@ -21,9 +18,7 @@ def test_missing_token_returns_401(client):
 def test_invalid_token_returns_401(client):
     response = client.get(
         "/api/v1/appointments/me",
-        headers={
-            "Authorization": "Bearer invalid-token"
-        },
+        headers={"Authorization": "Bearer invalid-token"},
     )
 
     assert response.status_code == 401
@@ -113,12 +108,14 @@ def test_unapproved_doctor_cannot_complete_appointment(
 
     response = client.patch(
         f"/api/v1/appointments/{uuid4()}/status",
-        json={"status": "completed"},
+        json={
+            "visit_summary": "Patient consultation completed for testing.",
+            "diagnosis": "Test diagnosis",
+        },
         headers=doctor_headers,
     )
 
     assert response.status_code == 403
-
     assert response.json()["detail"] == (
-        "Only approved doctors can update appointment status."
+        "Only approved doctors can complete consultations."
     )
