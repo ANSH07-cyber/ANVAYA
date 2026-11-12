@@ -1,4 +1,4 @@
-
+from datetime import date
 from uuid import UUID
 
 from fastapi import (
@@ -14,11 +14,11 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import require_roles
 from app.db.session import get_db
-
+from app.schemas.appointment import AvailableSlotsResponse
 from app.models.doctor_profile import DoctorProfile
 from app.models.doctor_availability import DoctorAvailability
 from app.models.user import User
-
+from app.services.appointment_service import generate_available_slots
 from app.schemas.doctor import (
     DoctorPublicListResponse,
     DoctorPublicRead,
@@ -209,4 +209,59 @@ def get_public_doctor_availability(
     return DoctorPublicAvailabilityListResponse(
         items=items,
         total=len(items),
+    )
+
+# =====================================================
+# 3. GET DATE-WISE AVAILABLE APPOINTMENT SLOTS
+# =====================================================
+
+@router.get(
+    "/{doctor_profile_id}/availability/slots",
+    response_model=AvailableSlotsResponse,
+)
+def get_available_appointment_slots(
+    doctor_profile_id: UUID,
+    appointment_date: date = Query(
+        ...,
+        description="Appointment date in YYYY-MM-DD format.",
+    ),
+    current_user: User = Depends(require_roles("patient")),
+    db: Session = Depends(get_db),
+) -> AvailableSlotsResponse:
+
+    # STEP 1: Only active and approved doctors
+    # can receive patient-facing booking requests.
+
+    doctor_profile = db.scalar(
+        select(DoctorProfile)
+        .join(User, User.id == DoctorProfile.user_id)
+        .where(
+            DoctorProfile.id == doctor_profile_id,
+            User.role == "doctor",
+            User.is_active.is_(True),
+            DoctorProfile.verification_status == "approved",
+        )
+    )
+
+    if doctor_profile is None:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Approved doctor not found.",
+        )
+
+    # STEP 2: Generate slots using the appointment service.
+
+    available_slots = generate_available_slots(
+        db=db,
+        doctor_profile_id=doctor_profile.id,
+        appointment_date=appointment_date,
+    )
+
+    # STEP 3: Return available slots.
+
+    return AvailableSlotsResponse(
+        doctor_profile_id=doctor_profile.id,
+        appointment_date=appointment_date,
+        items=available_slots,
+        total=len(available_slots),
     )
