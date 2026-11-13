@@ -226,12 +226,15 @@ def get_patient_health_records_for_doctor(
 
     # STEP 3: Ensure the requested patient exists.
 
-    patient_profile = db.scalar(
-        select(PatientProfile).where(
-            PatientProfile.id == patient_profile_id
-        )
-    )
+    # Lock the patient profile first.
+    # This keeps the lock order consistent with consent revocation
+    # and prevents a PatientProfile <-> ConsentRecord deadlock.
 
+    patient_profile = db.scalar(
+        select(PatientProfile)
+        .where(PatientProfile.id == patient_profile_id)
+        .with_for_update()
+        )
     if patient_profile is None:
 
         _log_doctor_ehr_access(

@@ -1,3 +1,7 @@
+from datetime import date, datetime, time, timedelta, timezone
+
+from app.models.audit_log import AuditLog
+from app.schemas.audit_log import AuditLogListResponse
 
 from typing import Literal
 from uuid import UUID
@@ -226,3 +230,140 @@ def review_doctor(
     db.refresh(doctor_profile)
 
     return doctor_profile
+
+# =========================================================
+# 5. VIEW AUDIT LOGS - ADMIN ONLY
+# =========================================================
+
+@router.get(
+    "/audit-logs",
+    response_model=AuditLogListResponse,
+)
+def list_audit_logs(
+    event_type: str | None = Query(
+        default=None,
+        min_length=1,
+        max_length=100,
+    ),
+
+    outcome: Literal["success", "denied", "failure"] | None = Query(
+        default=None,
+    ),
+
+    patient_profile_id: UUID | None = Query(default=None),
+
+    doctor_profile_id: UUID | None = Query(default=None),
+
+    date_from: date | None = Query(default=None),
+
+    date_to: date | None = Query(default=None),
+
+    limit: int = Query(default=20, ge=1, le=100),
+
+    offset: int = Query(default=0, ge=0),
+
+    current_user: User = Depends(require_roles("admin")),
+    db: Session = Depends(get_db),
+) -> AuditLogListResponse:
+    """
+    Return a filtered, paginated audit history.
+
+    Only authenticated administrators can view audit logs.
+    This endpoint is read-only.
+    """
+
+    # STEP 1: Validate date range.
+
+    if date_from is not None and date_to is not None:
+        if date_from > date_to:
+            raise HTTPException(
+                status_code=422,
+                detail="date_from cannot be after date_to.",
+            )
+
+    # STEP 2: Build common database filters.
+
+    filters = []
+
+    if event_type is not None:
+        normalized_event_type = event_type.strip()
+
+        if not normalized_event_type:
+            raise HTTPException(
+                status_code=422,
+                detail="Event type cannot be empty.",
+            )
+
+        filters.append(
+            AuditLog.event_type == normalized_event_type
+        )
+
+    if outcome is not None:
+        filters.append(
+            AuditLog.outcome == outcome
+        )
+
+    if patient_profile_id is not None:
+        filters.append(
+            AuditLog.patient_profile_id == patient_profile_id
+        )
+
+    if doctor_profile_id is not None:
+        filters.append(
+            AuditLog.doctor_profile_id == doctor_profile_id
+        )
+
+    # Audit timestamps are stored in UTC.
+    # End date uses an exclusive upper bound.
+
+    if date_from is not None:
+        start_datetime = datetime.combine(
+            date_from,
+            time.min,
+            tzinfo=timezone.utc,
+        )
+
+        filters.append(
+            AuditLog.created_at >= start_datetime
+        )
+
+    if date_to is not None:
+        end_datetime = datetime.combine(
+            date_to + timedelta(days=1),
+            time.min,
+            tzinfo=timezone.utc,
+        )
+
+        filters.append(
+            AuditLog.created_at < end_datetime
+        )
+
+    # STEP 3: Calculate total matching audit records.
+
+    total = db.scalar(
+        select(func.count(AuditLog.id))
+        .where(*filters)
+    ) or 0
+
+    # STEP 4: Retrieve records with pagination.
+    # Newest events appear first.
+
+    logs = db.scalars(
+        select(AuditLog)
+        .where(*filters)
+        .order_by(
+            AuditLog.created_at.desc(),
+            AuditLog.id.desc(),
+        )
+        .limit(limit)
+        .offset(offset)
+    ).all()
+
+    # STEP 5: Return structured response.
+
+    return AuditLogListResponse(
+        items=logs,
+        total=total,
+        limit=limit,
+        offset=offset,
+    )
