@@ -1,0 +1,354 @@
+/* ==========================================================================
+   ANVAYA Doctor Portal — Appointments Queue & Management Styling
+   Clinical dark theme: #070d18 / #0b1528 / #0ea5e9
+   ========================================================================== */
+
+.doc-queue-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Command Header */
+.doc-queue-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 24px 28px;
+  background: linear-gradient(135deg, #0b1528 0%, #0d1b33 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+}
+
+.doc-queue-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.doc-queue-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0ea5e9;
+}
+
+.doc-queue-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.doc-queue-subtitle {
+  font-size: 0.88rem;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.doc-queue-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Summary Metrics */
+.doc-queue-metrics {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 14px;
+}
+
+.doc-queue-metric-card {
+  background: #0b1528;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.doc-queue-metric-card:hover {
+  border-color: rgba(14, 165, 233, 0.3);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.doc-queue-metric-card-active {
+  border-color: #0ea5e9;
+  background: rgba(14, 165, 233, 0.06);
+  box-shadow: 0 0 16px rgba(14, 165, 233, 0.12);
+}
+
+.doc-queue-metric-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.doc-queue-metric-label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
+}
+
+.doc-queue-metric-val {
+  font-size: 1.5rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1;
+}
+
+.doc-queue-metric-sub {
+  font-size: 0.72rem;
+  color: #64748b;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Filter & Search Bar */
+.doc-queue-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 16px 20px;
+  background: #0b1528;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+}
+
+.doc-queue-tabs {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  overflow-x: auto;
+  max-width: 100%;
+}
+
+.doc-queue-tab {
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: #070d18;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #94a3b8;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.doc-queue-tab:hover {
+  border-color: rgba(14, 165, 233, 0.3);
+  color: #ffffff;
+}
+
+.doc-queue-tab-active {
+  background: #0284c7;
+  border-color: #38bdf8;
+  color: #ffffff !important;
+  font-weight: 700;
+}
+
+.doc-queue-tab-count {
+  font-size: 0.72rem;
+  padding: 1px 6px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.15);
+  color: #ffffff;
+}
+
+.doc-queue-search-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: 1;
+  max-width: 420px;
+}
+
+.doc-search-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: #070d18;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  flex: 1;
+}
+
+.doc-search-input {
+  background: transparent;
+  border: none;
+  outline: none;
+  color: #ffffff;
+  font-size: 0.85rem;
+  width: 100%;
+}
+
+.doc-search-input::placeholder {
+  color: #64748b;
+}
+
+.doc-date-input {
+  background: #070d18;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 10px;
+  color: #ffffff;
+  font-size: 0.82rem;
+  outline: none;
+}
+
+/* Queue List / Table */
+.doc-queue-table-card {
+  background: #0b1528;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.doc-queue-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.doc-queue-table th {
+  padding: 14px 18px;
+  background: #070d18;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.doc-queue-table td {
+  padding: 16px 18px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.88rem;
+  color: #e2e8f0;
+}
+
+.doc-queue-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.doc-time-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.doc-time-date {
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 0.85rem;
+}
+
+.doc-time-slot {
+  font-size: 0.75rem;
+  color: #0ea5e9;
+  font-weight: 600;
+}
+
+.doc-patient-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.doc-patient-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(14, 165, 233, 0.12);
+  color: #38bdf8;
+  display: grid;
+  place-items: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.doc-patient-name {
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.doc-reason-cell {
+  max-width: 280px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #94a3b8;
+  font-size: 0.82rem;
+}
+
+.doc-actions-cell {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.doc-btn-danger {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.doc-btn-danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.22);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
+}
+
+/* Responsive */
+@media (max-width: 1100px) {
+  .doc-queue-metrics {
+    grid-template-columns: repeat(3, 1fr);
+  }
+}
+
+@media (max-width: 768px) {
+  .doc-queue-metrics {
+    grid-template-columns: 1fr;
+  }
+
+  .doc-queue-controls {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .doc-queue-search-group {
+    max-width: 100%;
+    flex-direction: column;
+  }
+}
+

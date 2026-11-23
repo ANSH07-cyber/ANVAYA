@@ -1,0 +1,1086 @@
+/* ==========================================================================
+   ANVAYA Doctor Portal — Patient Directory & Consent-Gated Access Styles
+   Theme: Clinical Dark (#070d18 / #0b1528 / #0ea5e9 / #14b8a6)
+   ========================================================================== */
+
+.doc-pat-container {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   Header Card & Metrics
+   -------------------------------------------------------------------------- */
+.doc-pat-header-card {
+  background: linear-gradient(135deg, #0b1528 0%, #0d1e38 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.doc-pat-header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.doc-pat-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doc-pat-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #14b8a6;
+}
+
+.doc-pat-title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.doc-pat-subtitle {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #94a3b8;
+  max-width: 720px;
+  line-height: 1.6;
+}
+
+.doc-pat-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.doc-pat-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.doc-pat-refresh-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.doc-pat-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Quick Metrics Row */
+.doc-pat-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 18px;
+}
+
+.doc-pat-metric-box {
+  background: #08111e;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 10px;
+  padding: 14px 18px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  transition: all 0.15s ease;
+}
+
+.doc-pat-metric-box:hover {
+  border-color: rgba(255, 255, 255, 0.14);
+  background: #0a1424;
+}
+
+.doc-pat-metric-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: rgba(20, 184, 166, 0.12);
+  color: #14b8a6;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.doc-pat-metric-icon.blue {
+  background: rgba(14, 165, 233, 0.12);
+  color: #0ea5e9;
+}
+
+.doc-pat-metric-icon.green {
+  background: rgba(16, 185, 129, 0.12);
+  color: #10b981;
+}
+
+.doc-pat-metric-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.doc-pat-metric-value {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.doc-pat-metric-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* --------------------------------------------------------------------------
+   Privacy & Consent Advisory Banner (WCAG High Contrast Refinement)
+   -------------------------------------------------------------------------- */
+.doc-pat-advisory-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(14, 165, 233, 0.12) 0%, rgba(20, 184, 166, 0.06) 100%), #08111e;
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  border-left: 4px solid #0ea5e9;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.doc-pat-advisory-icon-wrapper {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(14, 165, 233, 0.16);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  color: #38bdf8;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  box-shadow: 0 0 12px rgba(14, 165, 233, 0.15);
+}
+
+.doc-pat-advisory-icon {
+  color: #38bdf8;
+}
+
+.doc-pat-advisory-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doc-pat-advisory-heading {
+  margin: 0;
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
+.doc-pat-advisory-text {
+  margin: 0;
+  font-size: 0.84rem;
+  color: #cbd5e1;
+  line-height: 1.55;
+}
+
+/* --------------------------------------------------------------------------
+   Filter & Search Card
+   -------------------------------------------------------------------------- */
+.doc-pat-filter-card {
+  background: #0b1528;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.doc-pat-search-group {
+  position: relative;
+  flex: 1;
+  min-width: 280px;
+}
+
+.doc-pat-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+}
+
+.doc-pat-search-input {
+  width: 100%;
+  background: #070d18;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 10px 38px 10px 40px;
+  color: #ffffff;
+  font-size: 0.86rem;
+  transition: all 0.15s ease;
+  box-sizing: border-box;
+}
+
+.doc-pat-search-input:focus {
+  outline: none;
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+}
+
+.doc-pat-search-clear {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 2px;
+  border-radius: 4px;
+}
+
+.doc-pat-search-clear:hover {
+  color: #e2e8f0;
+}
+
+/* Consent Filter Tabs */
+.doc-pat-filter-tabs {
+  display: flex;
+  align-items: center;
+  background: #070d18;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+
+.doc-pat-tab-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  padding: 7px 14px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.doc-pat-tab-btn:hover:not(.active) {
+  color: #ffffff;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.doc-pat-tab-btn.active {
+  background: rgba(14, 165, 233, 0.18);
+  color: #38bdf8;
+  font-weight: 700;
+}
+
+.doc-pat-tab-btn.active.consent-true {
+  background: rgba(16, 185, 129, 0.18);
+  color: #34d399;
+}
+
+.doc-pat-tab-btn.active.consent-false {
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+}
+
+/* --------------------------------------------------------------------------
+   Directory Table Presentation (High Contrast & Alignment)
+   -------------------------------------------------------------------------- */
+.doc-pat-table-container {
+  background: #0b1528;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  overflow-x: auto;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+  scrollbar-width: thin;
+  scrollbar-color: #1e293b #070d18;
+}
+
+.doc-pat-table-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.doc-pat-table-container::-webkit-scrollbar-track {
+  background: #070d18;
+}
+
+.doc-pat-table-container::-webkit-scrollbar-thumb {
+  background: #1e293b;
+  border-radius: 4px;
+}
+
+.doc-pat-table-container::-webkit-scrollbar-thumb:hover {
+  background: #334155;
+}
+
+.doc-pat-table {
+  width: 100%;
+  min-width: 900px;
+  border-collapse: collapse;
+  text-align: left;
+  font-size: 0.84rem;
+}
+
+.doc-pat-table th {
+  background: #08111e;
+  color: #94a3b8;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 15px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+
+.doc-pat-table th.doc-pat-th-action {
+  text-align: right;
+}
+
+.doc-pat-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  vertical-align: middle;
+  color: #cbd5e1;
+}
+
+.doc-pat-table td.doc-pat-action-cell {
+  text-align: right;
+}
+
+.doc-pat-table tbody tr {
+  transition: background 0.15s ease;
+}
+
+.doc-pat-table tbody tr:hover {
+  background: rgba(14, 165, 233, 0.035);
+}
+
+.doc-pat-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* Patient Identity Column */
+.doc-pat-identity-cell {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.doc-pat-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0ea5e9 0%, #14b8a6 100%);
+  color: #ffffff;
+  display: grid;
+  place-items: center;
+  font-size: 0.88rem;
+  font-weight: 800;
+  flex-shrink: 0;
+  box-shadow: 0 2px 10px rgba(14, 165, 233, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.doc-pat-name-group {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.doc-pat-name {
+  font-weight: 700;
+  color: #ffffff;
+  font-size: 0.92rem;
+  letter-spacing: -0.01em;
+}
+
+.doc-pat-id-sub {
+  font-size: 0.7rem;
+  color: #64748b;
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+}
+
+/* Contact & Demographics */
+.doc-pat-demographics {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.doc-pat-phone {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #e2e8f0;
+  font-size: 0.82rem;
+  font-weight: 500;
+}
+
+.doc-pat-gender-chip {
+  display: inline-flex;
+  align-items: center;
+  font-size: 0.72rem;
+  color: #94a3b8;
+  text-transform: capitalize;
+}
+
+/* Appointments Stats */
+.doc-pat-appt-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  background: rgba(14, 165, 233, 0.1);
+  border: 1px solid rgba(14, 165, 233, 0.25);
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  color: #38bdf8;
+}
+
+/* Last Appointment Column */
+.doc-pat-last-appt {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doc-pat-last-date {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #e2e8f0;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.doc-pat-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 4px;
+  width: fit-content;
+}
+
+.doc-pat-status-pill.booked {
+  background: rgba(14, 165, 233, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(14, 165, 233, 0.28);
+}
+
+.doc-pat-status-pill.completed {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+}
+
+.doc-pat-status-pill.cancelled {
+  background: rgba(239, 68, 68, 0.12);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.28);
+}
+
+/* Consent Status Badges */
+.doc-pat-consent-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 11px;
+  border-radius: 8px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.doc-pat-consent-badge.active {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.doc-pat-consent-badge.inactive {
+  background: rgba(245, 158, 11, 0.12);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+/* Action Buttons */
+.doc-pat-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 7px 14px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  border: none;
+}
+
+.doc-pat-action-btn.active-consent {
+  background: linear-gradient(135deg, rgba(20, 184, 166, 0.2) 0%, rgba(14, 165, 233, 0.2) 100%);
+  border: 1px solid rgba(20, 184, 166, 0.45);
+  color: #2dd4bf;
+}
+
+.doc-pat-action-btn.active-consent:hover {
+  background: linear-gradient(135deg, #0d9488 0%, #0284c7 100%);
+  color: #ffffff;
+  border-color: transparent;
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+}
+
+.doc-pat-action-btn.locked {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.doc-pat-consent-badge.pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
+}
+
+.doc-pat-action-stack {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.doc-pat-action-btn.request-consent {
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(14, 165, 233, 0.35);
+  color: #38bdf8;
+}
+
+.doc-pat-action-btn.request-consent:hover:not(:disabled) {
+  background: #0284c7;
+  border-color: #0ea5e9;
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.3);
+}
+
+.doc-pat-action-btn.request-consent:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.doc-pat-action-link {
+  background: transparent;
+  border: none;
+  color: #38bdf8;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  padding: 0;
+  text-decoration: underline;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: color 0.15s;
+}
+
+.doc-pat-action-link:hover:not(:disabled) {
+  color: #7dd3fc;
+}
+
+.doc-pat-action-link:disabled {
+  opacity: 0.5;
+  cursor: wait;
+}
+
+.doc-pat-pending-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.25);
+  color: #fbbf24;
+  font-size: 0.72rem;
+  font-weight: 600;
+}
+
+.doc-pat-feedback-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 18px;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  font-weight: 500;
+  animation: docPatFadeIn 0.2s ease-out;
+}
+
+.doc-pat-feedback-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.doc-pat-feedback-banner.success {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #6ee7b7;
+}
+
+.doc-pat-feedback-banner.error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.doc-pat-feedback-banner.info {
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(14, 165, 233, 0.3);
+  color: #7dd3fc;
+}
+
+.doc-pat-feedback-close {
+  background: transparent;
+  border: none;
+  color: currentColor;
+  opacity: 0.7;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.doc-pat-feedback-close:hover {
+  opacity: 1;
+}
+
+@keyframes docPatFadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* --------------------------------------------------------------------------
+   Pagination Footer
+   -------------------------------------------------------------------------- */
+.doc-pat-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.doc-pat-pagination-info {
+  font-size: 0.8rem;
+  color: #94a3b8;
+}
+
+.doc-pat-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.doc-pat-page-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #e2e8f0;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.doc-pat-page-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #ffffff;
+}
+
+.doc-pat-page-btn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* --------------------------------------------------------------------------
+   Empty & Error States (Polished Guidance & Aesthetic)
+   -------------------------------------------------------------------------- */
+.doc-pat-empty-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 72px 28px;
+  gap: 16px;
+  max-width: 580px;
+  margin: 0 auto;
+}
+
+.doc-pat-empty-icon {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(14, 165, 233, 0.16) 0%, rgba(20, 184, 166, 0.06) 100%);
+  border: 1px solid rgba(56, 189, 248, 0.28);
+  color: #38bdf8;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 0 30px rgba(14, 165, 233, 0.15);
+  margin-bottom: 4px;
+}
+
+.doc-pat-empty-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.doc-pat-empty-desc {
+  font-size: 0.9rem;
+  color: #94a3b8;
+  max-width: 480px;
+  margin: 0;
+  line-height: 1.6;
+}
+
+.doc-pat-empty-guidance {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 14px;
+  margin-top: 6px;
+}
+
+.doc-pat-empty-subtext {
+  font-size: 0.8rem;
+  color: #64748b;
+  line-height: 1.5;
+  margin: 0;
+  max-width: 440px;
+}
+
+.doc-pat-guide-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
+  border: 1px solid rgba(56, 189, 248, 0.4);
+  color: #ffffff;
+  padding: 10px 20px;
+  border-radius: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: 0 4px 14px rgba(14, 165, 233, 0.25);
+  transition: all 0.15s ease;
+}
+
+.doc-pat-guide-link:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 18px rgba(14, 165, 233, 0.35);
+  background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
+}
+
+.doc-pat-clear-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(14, 165, 233, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  color: #38bdf8;
+  padding: 9px 18px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  margin-top: 4px;
+  transition: all 0.15s ease;
+}
+
+.doc-pat-clear-btn:hover {
+  background: rgba(14, 165, 233, 0.22);
+  color: #ffffff;
+  border-color: rgba(56, 189, 248, 0.5);
+}
+
+/* Error State */
+.doc-pat-error-card {
+  background: #0b1528;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 14px;
+  padding: 40px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 14px;
+}
+
+.doc-pat-error-icon {
+  color: #f87171;
+}
+
+.doc-pat-error-title {
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.doc-pat-error-desc {
+  font-size: 0.86rem;
+  color: #94a3b8;
+  max-width: 480px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------------------
+   Consent EHR Slide-Over Drawer
+   -------------------------------------------------------------------------- */
+.doc-ehr-drawer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+  display: flex;
+  justify-content: flex-end;
+  animation: fadeIn 0.15s ease-out;
+}
+
+.doc-ehr-drawer {
+  width: 100%;
+  max-width: 680px;
+  height: 100%;
+  background: #0b1528;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  box-shadow: -10px 0 30px rgba(0, 0, 0, 0.5);
+  animation: slideInRight 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.doc-ehr-drawer-header {
+  padding: 20px 24px;
+  background: #070d18;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.doc-ehr-drawer-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doc-ehr-drawer-kicker {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #14b8a6;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.doc-ehr-drawer-title {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.doc-ehr-drawer-close {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: grid;
+  place-items: center;
+  transition: all 0.15s ease;
+}
+
+.doc-ehr-drawer-close:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+}
+
+.doc-ehr-drawer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* --------------------------------------------------------------------------
+   Loading Skeletons
+   -------------------------------------------------------------------------- */
+.doc-skeleton-row {
+  height: 60px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.02) 25%,
+    rgba(255, 255, 255, 0.05) 37%,
+    rgba(255, 255, 255, 0.02) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeletonPulse 1.4s ease infinite;
+}
+
+@keyframes skeletonPulse {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Layout
+   -------------------------------------------------------------------------- */
+@media (max-width: 900px) {
+  .doc-pat-filter-card {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .doc-pat-search-group {
+    min-width: 100%;
+  }
+  .doc-pat-filter-tabs {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 4px;
+  }
+}
+
+@media (max-width: 640px) {
+  .doc-pat-header-card {
+    padding: 18px 20px;
+  }
+  .doc-pat-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+  .doc-pat-pagination-bar {
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+  }
+  .doc-ehr-drawer {
+    max-width: 100%;
+  }
+}

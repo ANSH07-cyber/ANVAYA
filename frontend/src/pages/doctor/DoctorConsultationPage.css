@@ -1,0 +1,132 @@
+/* ==========================================================================
+   ANVAYA Doctor Portal — Consultation Page Styling
+   Clinical dark theme: #070d18 / #0b1528 / #0ea5e9
+   ========================================================================== */
+
+.doc-consult-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+.doc-consult-card {
+  background: #0b1528;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+}
+
+.doc-consult-error-card {
+  background: #0b1528;
+  border: 1px solid rgba(239, 68, 68, 0.25);
+  border-radius: 14px;
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.doc-consult-error-title {
+  font-size: 1.3rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.doc-consult-error-desc {
+  font-size: 0.88rem;
+  color: #94a3b8;
+  max-width: 480px;
+  line-height: 1.55;
+  margin: 0;
+}
+
+/* Split Clinical Grid */
+.doc-consult-split-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 20px;
+  align-items: start;
+}
+
+.doc-consult-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 16px;
+}
+
+/* Prescription Section in Consultation Room */
+.doc-consult-rx-card {
+  background: #0b1528;
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+}
+
+.doc-consult-rx-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doc-consult-rx-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0c8b82;
+}
+
+.doc-consult-rx-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.doc-consult-rx-desc {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #94a3b8;
+  line-height: 1.5;
+}
+
+.doc-consult-rx-error {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  padding: 10px 14px;
+  font-size: 0.82rem;
+  color: #f87171;
+}
+
+.doc-consult-rx-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 4px;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .doc-consult-split-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

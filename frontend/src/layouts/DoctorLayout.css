@@ -1,0 +1,484 @@
+/* ========================================================
+   ANVAYA DOCTOR PORTAL LAYOUT & DESIGN SYSTEM
+   ======================================================== */
+
+.doctor-shell {
+  display: flex;
+  min-height: 100vh;
+  background-color: #f5f8f7;
+  color: #162a31;
+  font-family: inherit;
+}
+
+/* ========================================================
+   SIDEBAR
+   ======================================================== */
+
+.doctor-sidebar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  flex-direction: column;
+  width: 272px;
+  height: 100vh;
+  flex-shrink: 0;
+  padding: 24px 20px 20px;
+  border-right: 1px solid #1a333d;
+  background-color: #0c191f;
+  color: #d1e2dd;
+  z-index: 100;
+  overflow-y: auto;
+}
+
+.doctor-brand {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.doctor-brand-left {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+}
+
+.doctor-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #0c8b82 0%, #065a54 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(12, 139, 130, 0.35);
+}
+
+.doctor-brand-copy {
+  display: flex;
+  flex-direction: column;
+}
+
+.doctor-brand-name {
+  font-size: 19px;
+  font-weight: 800;
+  letter-spacing: -0.6px;
+  color: #ffffff;
+}
+
+.doctor-brand-tag {
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 1.3px;
+  color: #14a398;
+}
+
+.doctor-sidebar-close {
+  display: none;
+  background: transparent;
+  border: none;
+  color: #8da49e;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.doctor-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  padding: 7px 12px;
+  border: 1px solid rgba(20, 163, 152, 0.25);
+  border-radius: 9px;
+  background: rgba(12, 139, 130, 0.12);
+  color: #52cfc2;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1px;
+}
+
+.doctor-live-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background-color: #10b981;
+  box-shadow: 0 0 8px #10b981;
+  animation: doctorPulse 2s infinite ease-in-out;
+}
+
+@keyframes doctorPulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(0.85);
+  }
+}
+
+.doctor-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+}
+
+.doctor-nav-section-title {
+  margin: 14px 0 8px 10px;
+  color: #637e78;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 1.4px;
+}
+
+.doctor-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 11px 14px;
+  border-radius: 11px;
+  color: #9eb6af;
+  font-size: 13px;
+  font-weight: 650;
+  text-decoration: none;
+  transition: all 0.16s ease;
+}
+
+.doctor-nav-item:hover {
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+.doctor-nav-item.active {
+  background: linear-gradient(90deg, rgba(12, 139, 130, 0.22) 0%, rgba(12, 139, 130, 0.08) 100%);
+  border: 1px solid rgba(20, 163, 152, 0.35);
+  color: #ffffff;
+}
+
+.doctor-nav-item.active svg {
+  color: #14a398;
+}
+
+.doctor-nav-item svg {
+  color: #728d87;
+  transition: color 0.16s ease;
+}
+
+.doctor-nav-item:hover svg {
+  color: #c0ded6;
+}
+
+/* Sidebar Footer / User Identity */
+.doctor-sidebar-footer {
+  margin-top: auto;
+  padding-top: 18px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.doctor-user-card {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.doctor-user-avatar {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  background: #14353f;
+  color: #52cfc2;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.doctor-user-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.doctor-user-name {
+  display: block;
+  font-size: 13px;
+  font-weight: 750;
+  color: #ffffff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doctor-user-role {
+  display: block;
+  font-size: 11px;
+  color: #7b9790;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.doctor-logout-btn {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: #8da49e;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.doctor-logout-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+/* ========================================================
+   MAIN CONTENT AREA & TOPBAR
+   ======================================================== */
+
+.doctor-main {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-width: 0;
+  min-height: 100vh;
+}
+
+.doctor-topbar {
+  position: sticky;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  height: 68px;
+  padding: 0 32px;
+  border-bottom: 1px solid #dce8e4;
+  background: rgba(255, 255, 255, 0.88);
+  backdrop-filter: blur(8px);
+  z-index: 50;
+}
+
+.doctor-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.doctor-mobile-menu-btn {
+  display: none;
+  background: transparent;
+  border: 1px solid #d8e5e1;
+  border-radius: 8px;
+  padding: 6px;
+  color: #385650;
+  cursor: pointer;
+}
+
+.doctor-breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.doctor-breadcrumb-portal {
+  color: #55756d;
+  font-weight: 600;
+}
+
+.doctor-breadcrumb-current {
+  color: #0c191f;
+  font-weight: 750;
+  letter-spacing: -0.2px;
+}
+
+.doctor-breadcrumb-divider {
+  color: #a3bbb5;
+}
+
+.doctor-topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.doctor-date-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 12px;
+  border: 1px solid #dbe6e2;
+  border-radius: 9px;
+  background: #f7faf9;
+  color: #4b6a64;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.doctor-session-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 11px;
+  border: 1px solid #d2ede7;
+  border-radius: 9px;
+  background: #ebf7f5;
+  color: #0c8b82;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.doctor-session-status .doctor-live-dot {
+  width: 6px;
+  height: 6px;
+}
+
+.doctor-topbar-profile {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 12px 4px 6px;
+  border: 1px solid #d4e3df;
+  border-radius: 10px;
+  background: #ffffff;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.doctor-topbar-avatar {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 8px;
+  background: linear-gradient(135deg, #0c8b82 0%, #08615b 100%);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.doctor-topbar-profile-info {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.doctor-topbar-name {
+  font-size: 12px;
+  font-weight: 750;
+  color: #0c191f;
+  line-height: 1.2;
+}
+
+.doctor-topbar-sub {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 10px;
+  color: #0c8b82;
+  font-weight: 650;
+  line-height: 1;
+}
+
+.doctor-content {
+  flex: 1;
+  padding: 28px 36px;
+  max-width: 1600px;
+  width: 100%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.doctor-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 36px;
+  border-top: 1px solid #dce8e4;
+  background: #ffffff;
+  color: #6d8881;
+  font-size: 11px;
+}
+
+.doctor-footer-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.doctor-footer-sep {
+  color: #a3bbb5;
+}
+
+.doctor-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #0c8b82;
+  font-weight: 650;
+}
+
+/* ========================================================
+   RESPONSIVE DRAWER & BREAKPOINTS
+   ======================================================== */
+
+.doctor-backdrop {
+  display: none;
+}
+
+@media (max-width: 960px) {
+  .doctor-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    transform: translateX(-100%);
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    box-shadow: 10px 0 35px rgba(0, 0, 0, 0.4);
+  }
+
+  .doctor-sidebar.is-open {
+    transform: translateX(0);
+  }
+
+  .doctor-sidebar-close {
+    display: block;
+  }
+
+  .doctor-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(12, 25, 31, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 90;
+  }
+
+  .doctor-mobile-menu-btn {
+    display: block;
+  }
+
+  .doctor-topbar {
+    padding: 0 18px;
+  }
+
+  .doctor-content {
+    padding: 20px 16px;
+  }
+
+  .doctor-date-badge {
+    display: none;
+  }
+}
+

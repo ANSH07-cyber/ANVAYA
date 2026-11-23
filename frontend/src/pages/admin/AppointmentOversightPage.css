@@ -1,0 +1,84 @@
+/* Appointments Oversight Studio Styles */
+
+.appointment-date-inputs {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.appointment-date-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #0f1f33;
+  border: 1px solid #1e3a5f;
+  border-radius: 8px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #94a3b8;
+}
+
+.appointment-date-input {
+  background: transparent;
+  border: none;
+  color: #e2e8f0;
+  font-size: 12px;
+  font-weight: 600;
+  outline: none;
+  cursor: pointer;
+}
+
+.appointment-date-input::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+  cursor: pointer;
+}
+
+.appointment-schedule-cell {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.appointment-date-text {
+  font-size: 13px;
+  font-weight: 700;
+  color: #ffffff;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.appointment-time-text {
+  font-size: 12px;
+  color: #94a3b8;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.appointment-reason-preview {
+  font-size: 12px;
+  color: #cbd5e1;
+  max-width: 260px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: block;
+}
+
+.patient-avatar {
+  background: linear-gradient(135deg, #0ea5e9 0%, #0284c7 100%) !important;
+}
+
+.tab-cyan.is-active {
+  background: #0e7490 !important;
+  border-color: #06b6d4 !important;
+  color: #ffffff !important;
+}
+
+.status-pill-cyan {
+  background: rgba(6, 182, 212, 0.12);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+  color: #22d3ee;
+}

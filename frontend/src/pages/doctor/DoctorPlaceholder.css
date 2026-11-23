@@ -1,0 +1,812 @@
+/* ========================================================
+   ANVAYA DOCTOR WORKSPACE MODULES CSS
+   ======================================================== */
+
+.doctor-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  width: 100%;
+}
+
+/* ========================================================
+   HEADER BANNER
+   ======================================================== */
+
+.doc-header-banner {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 24px;
+  padding: 26px 32px;
+  background: #ffffff;
+  border: 1px solid #d8e8e3;
+  border-radius: 18px;
+  box-shadow: 0 2px 10px rgba(12, 139, 130, 0.04);
+}
+
+.doc-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-width: 820px;
+}
+
+.doc-kicker-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  width: fit-content;
+  padding: 4px 10px;
+  border-radius: 6px;
+  background: #ebf7f5;
+  color: #0c8b82;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+}
+
+.doc-header-title {
+  margin: 0;
+  color: #0c191f;
+  font-size: 24px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+}
+
+.doc-header-desc {
+  margin: 0;
+  color: #4f6e67;
+  font-size: 13.5px;
+  line-height: 1.6;
+}
+
+.doc-header-right {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+.doc-doctor-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  border-radius: 9px;
+  background: #f4f8f7;
+  border: 1px solid #dce8e4;
+  color: #1a3932;
+  font-size: 11.5px;
+  font-weight: 700;
+}
+
+.doc-phase-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 7px;
+  background: #f7faf9;
+  border: 1px solid #e1ebe7;
+  color: #55756d;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+/* ========================================================
+   WORKSPACE GRID (68:32)
+   ======================================================== */
+
+.doc-workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 360px;
+  gap: 24px;
+  align-items: start;
+}
+
+.doc-primary-canvas {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.doc-context-rail {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ========================================================
+   CLINICAL CARDS
+   ======================================================== */
+
+.doc-card {
+  display: flex;
+  flex-direction: column;
+  padding: 24px 28px;
+  background: #ffffff;
+  border: 1px solid #d8e8e3;
+  border-radius: 16px;
+  box-shadow: 0 2px 8px rgba(12, 139, 130, 0.03);
+}
+
+.doc-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e8f0ed;
+}
+
+.doc-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.doc-card-icon {
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: #ebf7f5;
+  color: #0c8b82;
+}
+
+.doc-card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 750;
+  color: #0c191f;
+  letter-spacing: -0.2px;
+}
+
+.doc-card-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  font-weight: 700;
+  color: #0c8b82;
+  padding: 3px 8px;
+  background: #ebf7f5;
+  border-radius: 6px;
+}
+
+.doc-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.doc-card-footer {
+  margin-top: 18px;
+  padding-top: 14px;
+  border-top: 1px solid #eef4f1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 11.5px;
+  color: #637e78;
+}
+
+/* ========================================================
+   OVERVIEW MODULE: CLINICAL COMMAND CENTER
+   ======================================================== */
+
+.doc-launch-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.doc-launch-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 20px 22px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #dce8e4;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+}
+
+.doc-launch-card:hover {
+  border-color: #0c8b82;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(12, 139, 130, 0.08);
+}
+
+.doc-launch-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.doc-launch-icon-box {
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: #ebf7f5;
+  color: #0c8b82;
+  transition: all 0.2s ease;
+}
+
+.doc-launch-card:hover .doc-launch-icon-box {
+  background: #0c8b82;
+  color: #ffffff;
+}
+
+.doc-launch-arrow {
+  color: #8fa8a1;
+  transition: all 0.2s ease;
+}
+
+.doc-launch-card:hover .doc-launch-arrow {
+  color: #0c8b82;
+  transform: translateX(3px);
+}
+
+.doc-launch-title {
+  margin: 0 0 6px;
+  font-size: 15px;
+  font-weight: 750;
+  color: #0c191f;
+}
+
+.doc-launch-desc {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #55756d;
+}
+
+.doc-readiness-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.doc-readiness-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 14px;
+  border-radius: 10px;
+  background: #f7faf9;
+  border: 1px solid #e3ede9;
+  font-size: 12.5px;
+}
+
+.doc-readiness-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #1a3932;
+  font-weight: 650;
+}
+
+.doc-readiness-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.doc-readiness-chip.active {
+  background: #e6f7f2;
+  color: #097969;
+}
+
+.doc-readiness-chip.pending {
+  background: #f0f4f3;
+  color: #5f7a73;
+}
+
+/* ========================================================
+   APPOINTMENTS MODULE
+   ======================================================== */
+
+.doc-queue-tabs {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-bottom: 4px;
+  border-bottom: 1px solid #e1ece7;
+  margin-bottom: 16px;
+}
+
+.doc-queue-tab {
+  padding: 8px 14px;
+  border-radius: 8px;
+  border: none;
+  background: transparent;
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #637e78;
+  transition: all 0.15s ease;
+  user-select: none;
+}
+
+.doc-queue-tab.active {
+  background: #ebf7f5;
+  color: #0c8b82;
+}
+
+.doc-queue-tab.disabled {
+  color: #8fa8a1;
+  cursor: not-allowed;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.doc-preview-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #f4f8f7;
+  border: 1px solid #dce8e4;
+  border-radius: 10px;
+  margin-bottom: 16px;
+}
+
+.doc-preview-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 12px;
+  color: #2b4943;
+  line-height: 1.5;
+}
+
+.doc-schedule-status.doc-schedule-preview-tag {
+  background: #edf3f1;
+  color: #4b6a64;
+  font-size: 10.5px;
+}
+
+.doc-phase-tag {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 7px;
+  border-radius: 5px;
+  background: #ebf7f5;
+  color: #0c8b82;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+}
+
+.doc-queue-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 48px 32px;
+  background: #f9fbfb;
+  border: 1px dashed #d0e2dd;
+  border-radius: 14px;
+  gap: 12px;
+}
+
+.doc-queue-empty-icon {
+  display: grid;
+  place-items: center;
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  background: #ffffff;
+  border: 1px solid #dce8e4;
+  color: #0c8b82;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+}
+
+.doc-queue-empty-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 750;
+  color: #0c191f;
+}
+
+.doc-queue-empty-text {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.6;
+  color: #55756d;
+  max-width: 460px;
+}
+
+.doc-queue-empty-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+  padding: 9px 18px;
+  border-radius: 9px;
+  background: #0c8b82;
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 750;
+  text-decoration: none;
+  transition: background 0.16s ease;
+}
+
+.doc-queue-empty-btn:hover {
+  background: #09726b;
+}
+
+/* ========================================================
+   AVAILABILITY MODULE
+   ======================================================== */
+
+.doc-schedule-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.doc-schedule-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-radius: 10px;
+  background: #f7faf9;
+  border: 1px solid #e1ede8;
+}
+
+.doc-schedule-day {
+  font-size: 13px;
+  font-weight: 750;
+  color: #0c191f;
+  width: 100px;
+}
+
+.doc-schedule-slots {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: #3b5a53;
+}
+
+.doc-slot-chip {
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: #ffffff;
+  border: 1px solid #dce8e4;
+  font-weight: 650;
+}
+
+.doc-schedule-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 700;
+  background: #ebf7f5;
+  color: #0c8b82;
+}
+
+/* ========================================================
+   PATIENT RECORDS MODULE (CONSENT GATED)
+   ======================================================== */
+
+.doc-consent-card {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 24px;
+  background: #fdfefe;
+  border: 1px solid #dce8e4;
+  border-radius: 12px;
+}
+
+.doc-consent-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  background: #ebf7f5;
+  border: 1px solid #cce8e2;
+  border-radius: 10px;
+}
+
+.doc-consent-banner-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  color: #1a3932;
+  line-height: 1.5;
+}
+
+.doc-scope-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.doc-scope-box {
+  padding: 14px;
+  background: #f7faf9;
+  border: 1px solid #e1ece8;
+  border-radius: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.doc-scope-label {
+  font-size: 12px;
+  font-weight: 750;
+  color: #0c191f;
+}
+
+.doc-scope-detail {
+  font-size: 11px;
+  color: #637e78;
+  line-height: 1.4;
+}
+
+/* ========================================================
+   PRESCRIPTIONS MODULE
+   ======================================================== */
+
+.doc-rx-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #d8e8e3;
+  border-radius: 12px;
+}
+
+.doc-rx-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-bottom: 12px;
+  border-bottom: 1px dashed #d0deda;
+}
+
+.doc-rx-badge {
+  font-size: 18px;
+  font-weight: 900;
+  color: #0c8b82;
+  letter-spacing: -0.5px;
+}
+
+.doc-rx-schema-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 10px;
+}
+
+.doc-rx-schema-cell {
+  padding: 10px;
+  background: #f7faf9;
+  border: 1px solid #e1ece8;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doc-rx-cell-title {
+  font-size: 10.5px;
+  font-weight: 750;
+  color: #728d87;
+  text-transform: uppercase;
+}
+
+.doc-rx-cell-val {
+  font-size: 12px;
+  font-weight: 700;
+  color: #162a31;
+}
+
+/* ========================================================
+   PRACTICE PROFILE MODULE
+   ======================================================== */
+
+.doc-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+.doc-profile-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px 14px;
+  background: #f7faf9;
+  border: 1px solid #e1ece8;
+  border-radius: 10px;
+}
+
+.doc-profile-label {
+  font-size: 10.5px;
+  font-weight: 750;
+  color: #728d87;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.doc-profile-val {
+  font-size: 13px;
+  font-weight: 750;
+  color: #0c191f;
+}
+
+/* ========================================================
+   CONSULTATION ROOM VALIDATOR
+   ======================================================== */
+
+.doc-consult-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 20px;
+  background: #fff8f0;
+  border: 1px solid #f9deb8;
+  border-radius: 12px;
+  color: #7c4800;
+}
+
+.doc-consult-valid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #d8e8e3;
+  border-radius: 12px;
+}
+
+/* ========================================================
+   CONTEXT RAIL CARDS
+   ======================================================== */
+
+.doc-context-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px;
+  background: #ffffff;
+  border: 1px solid #d8e8e3;
+  border-radius: 14px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.02);
+}
+
+.doc-context-title {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 750;
+  color: #0c191f;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.doc-info-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.doc-info-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 12px;
+}
+
+.doc-info-key {
+  color: #637e78;
+}
+
+.doc-info-val {
+  font-weight: 700;
+  color: #162a31;
+}
+
+.doc-guidance-text {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: #55756d;
+}
+
+.doc-rail-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.doc-rail-link {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px;
+  border-radius: 9px;
+  background: #f7faf9;
+  border: 1px solid #e1ece8;
+  color: #1a3932;
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.doc-rail-link:hover {
+  background: #ebf7f5;
+  border-color: #0c8b82;
+  color: #0c8b82;
+}
+
+/* ========================================================
+   RESPONSIVE BEHAVIOR
+   ======================================================== */
+
+@media (max-width: 1100px) {
+  .doc-workspace-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .doc-header-banner {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .doc-header-right {
+    align-items: flex-start;
+  }
+}
+
+@media (max-width: 768px) {
+  .doc-header-banner {
+    padding: 20px;
+  }
+
+  .doc-launch-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .doc-scope-list {
+    grid-template-columns: 1fr;
+  }
+
+  .doc-rx-schema-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .doc-profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

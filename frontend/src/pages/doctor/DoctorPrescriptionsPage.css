@@ -1,0 +1,645 @@
+/* ==========================================================================
+   ANVAYA Doctor Portal — Prescription History Page Styles
+   Theme: Clinical Dark (#070d18 / #0b1528 / #0ea5e9 / #14b8a6)
+   ========================================================================== */
+
+.doc-rx-container {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* Header Section */
+.doc-rx-header-card {
+  background: #0b1528;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.doc-rx-header-top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.doc-rx-header-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doc-rx-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #14b8a6;
+}
+
+.doc-rx-title {
+  margin: 0;
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: #ffffff;
+  letter-spacing: -0.02em;
+}
+
+.doc-rx-subtitle {
+  margin: 0;
+  font-size: 0.88rem;
+  color: #94a3b8;
+  max-width: 680px;
+  line-height: 1.55;
+}
+
+/* Header Actions */
+.doc-rx-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.doc-rx-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #e2e8f0;
+  padding: 9px 15px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.doc-rx-refresh-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+}
+
+.doc-rx-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.doc-rx-new-consult-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #0ea5e9;
+  color: #ffffff;
+  padding: 9px 16px;
+  border-radius: 8px;
+  font-size: 0.82rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: all 0.15s ease;
+  box-shadow: 0 2px 10px rgba(14, 165, 233, 0.3);
+}
+
+.doc-rx-new-consult-link:hover {
+  background: #0284c7;
+  transform: translateY(-1px);
+}
+
+/* Metric Stats Row */
+.doc-rx-metrics-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 14px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  padding-top: 18px;
+}
+
+.doc-rx-metric-box {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.doc-rx-metric-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  background: rgba(20, 184, 166, 0.1);
+  color: #14b8a6;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+}
+
+.doc-rx-metric-info {
+  display: flex;
+  flex-direction: column;
+}
+
+.doc-rx-metric-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: #ffffff;
+  line-height: 1.2;
+}
+
+.doc-rx-metric-label {
+  font-size: 0.74rem;
+  font-weight: 600;
+  color: #94a3b8;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Filter Card */
+.doc-rx-filter-card {
+  background: #0b1528;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 16px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.doc-rx-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.doc-rx-search-wrapper {
+  position: relative;
+  flex: 1;
+  min-width: 260px;
+}
+
+.doc-rx-search-icon {
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #64748b;
+  pointer-events: none;
+}
+
+.doc-rx-search-input {
+  width: 100%;
+  background: #070d18;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  padding: 10px 38px 10px 40px;
+  color: #ffffff;
+  font-size: 0.85rem;
+  transition: all 0.15s ease;
+}
+
+.doc-rx-search-input:focus {
+  outline: none;
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 2px rgba(14, 165, 233, 0.2);
+}
+
+.doc-rx-search-clear {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  color: #64748b;
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  padding: 2px;
+}
+
+.doc-rx-search-clear:hover {
+  color: #ffffff;
+}
+
+/* Advanced Filter Toggle / Inputs */
+.doc-rx-filter-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.doc-rx-input-sm {
+  background: #070d18;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #ffffff;
+  font-size: 0.8rem;
+  min-width: 180px;
+}
+
+.doc-rx-input-sm:focus {
+  outline: none;
+  border-color: #14b8a6;
+}
+
+.doc-rx-clear-filters-btn {
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #94a3b8;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.doc-rx-clear-filters-btn:hover {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+/* Active Filter Pill Bar */
+.doc-rx-active-pills {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  font-size: 0.78rem;
+  color: #64748b;
+}
+
+.doc-rx-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(14, 165, 233, 0.1);
+  border: 1px solid rgba(14, 165, 233, 0.2);
+  color: #38bdf8;
+  padding: 3px 8px;
+  border-radius: 6px;
+  font-weight: 600;
+}
+
+.doc-rx-pill-remove {
+  background: transparent;
+  border: none;
+  color: #38bdf8;
+  cursor: pointer;
+  padding: 0;
+  display: grid;
+  place-items: center;
+}
+
+/* Content Container Card */
+.doc-rx-content-card {
+  background: #0b1528;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
+}
+
+/* Table */
+.doc-rx-table-wrapper {
+  overflow-x: auto;
+}
+
+.doc-rx-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.doc-rx-table th {
+  background: #070d18;
+  color: #94a3b8;
+  font-size: 0.74rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  padding: 14px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  white-space: nowrap;
+}
+
+.doc-rx-table td {
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.86rem;
+  color: #e2e8f0;
+  vertical-align: middle;
+}
+
+.doc-rx-table tr:hover td {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.doc-rx-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* Table Cells */
+.doc-rx-cell-patient {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.doc-rx-patient-name {
+  font-weight: 700;
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.doc-rx-patient-ref {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-family: monospace;
+}
+
+.doc-rx-cell-date {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.82rem;
+  color: #cbd5e1;
+}
+
+.doc-rx-date-primary {
+  font-weight: 700;
+  color: #f1f5f9;
+}
+
+.doc-rx-date-sub {
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+/* Medicine Items Preview */
+.doc-rx-cell-meds {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-width: 380px;
+}
+
+.doc-rx-med-chips {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.doc-rx-med-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(20, 184, 166, 0.08);
+  border: 1px solid rgba(20, 184, 166, 0.2);
+  color: #2dd4bf;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 0.74rem;
+  font-weight: 600;
+}
+
+.doc-rx-med-more {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-weight: 600;
+}
+
+.doc-rx-cell-notes {
+  max-width: 220px;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Actions */
+.doc-rx-inspect-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(14, 165, 233, 0.1);
+  border: 1px solid rgba(14, 165, 233, 0.25);
+  color: #38bdf8;
+  padding: 6px 12px;
+  border-radius: 7px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.doc-rx-inspect-btn:hover {
+  background: #0ea5e9;
+  color: #ffffff;
+  border-color: #0ea5e9;
+}
+
+/* Pagination Bar */
+.doc-rx-pagination-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 24px;
+  background: #070d18;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.doc-rx-pagination-info {
+  font-size: 0.82rem;
+  color: #94a3b8;
+}
+
+.doc-rx-pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.doc-rx-page-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  padding: 6px 12px;
+  border-radius: 6px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.doc-rx-page-btn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ffffff;
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.doc-rx-page-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.doc-rx-page-size-select {
+  background: #0b1528;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  padding: 5px 8px;
+  color: #ffffff;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.doc-rx-page-size-select:focus {
+  outline: none;
+  border-color: #0ea5e9;
+}
+
+/* State: Loading Skeleton */
+.doc-rx-skeleton-table {
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.doc-rx-skeleton-row {
+  height: 48px;
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.02) 25%,
+    rgba(255, 255, 255, 0.06) 50%,
+    rgba(255, 255, 255, 0.02) 75%
+  );
+  background-size: 200% 100%;
+  animation: rxSkeletonShimmer 1.5s infinite;
+  border-radius: 8px;
+}
+
+@keyframes rxSkeletonShimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+/* State: Empty State */
+.doc-rx-empty-state {
+  padding: 64px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.doc-rx-empty-icon {
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
+  background: rgba(20, 184, 166, 0.1);
+  color: #14b8a6;
+  display: grid;
+  place-items: center;
+  margin-bottom: 4px;
+}
+
+.doc-rx-empty-title {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.doc-rx-empty-desc {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  max-width: 440px;
+  line-height: 1.55;
+}
+
+/* State: Error State */
+.doc-rx-error-state {
+  padding: 48px 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 12px;
+}
+
+.doc-rx-error-state h3 {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #f87171;
+}
+
+.doc-rx-error-state p {
+  margin: 0;
+  font-size: 0.86rem;
+  color: #cbd5e1;
+  max-width: 440px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 900px) {
+  .doc-rx-metrics-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .doc-rx-header-top {
+    flex-direction: column;
+  }
+
+  .doc-rx-metrics-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .doc-rx-filter-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .doc-rx-search-wrapper {
+    min-width: 100%;
+  }
+
+  .doc-rx-pagination-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+

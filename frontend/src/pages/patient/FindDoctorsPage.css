@@ -1,0 +1,1149 @@
+
+.find-doctors-page {
+  display: flex;
+  flex-direction: column;
+  gap: 25px;
+  width: 100%;
+  padding-bottom: 28px;
+  color: #183b43;
+}
+
+.find-doctors-hero {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 25px;
+  overflow: hidden;
+  min-height: 205px;
+  padding: 30px 34px;
+  border: 1px solid #d8eee8;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 85% 20%, rgba(255,255,255,.75), transparent 27%),
+    linear-gradient(115deg, #e9f9f4 0%, #e1f5ef 52%, #f2fbf8 100%);
+}
+
+.find-doctors-hero::after {
+  position: absolute;
+  right: 15%;
+  bottom: -100px;
+  width: 240px;
+  height: 240px;
+  border: 1px solid rgba(37, 151, 132, .1);
+  border-radius: 50%;
+  content: "";
+}
+
+.find-doctors-hero-content {
+  position: relative;
+  z-index: 1;
+  max-width: 620px;
+}
+
+.find-doctors-eyebrow,
+.find-doctors-section-kicker {
+  display: inline-block;
+  color: #168b83;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 1.3px;
+}
+
+.find-doctors-hero h1 {
+  max-width: 580px;
+  margin: 11px 0 10px;
+  color: #173e43;
+  font-size: clamp(25px, 3vw, 34px);
+  font-weight: 780;
+  line-height: 1.2;
+  letter-spacing: -1.1px;
+}
+
+.find-doctors-hero-content > p {
+  max-width: 510px;
+  margin: 0;
+  color: #66827f;
+  font-size: 13px;
+  line-height: 1.75;
+}
+
+.find-doctors-hero-trust {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 18px;
+  margin-top: 19px;
+}
+
+.find-doctors-hero-trust span {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  color: #34796e;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.find-doctors-hero-icon {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  flex: 0 0 130px;
+  width: 130px;
+  height: 130px;
+  margin-right: 24px;
+  border: 1px solid rgba(255,255,255,.8);
+  border-radius: 35px;
+  background: linear-gradient(145deg, #fff, #e0f4ed);
+  color: #168b83;
+  box-shadow: 0 12px 30px rgba(38, 121, 105, .1);
+}
+
+.find-doctors-hero-icon > span {
+  position: absolute;
+  right: -10px;
+  bottom: -8px;
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  border: 3px solid #e7f8f2;
+  border-radius: 12px;
+  background: #168b83;
+  color: #fff;
+}
+
+.find-doctors-search-section,
+.find-doctors-results {
+  padding: 24px 25px;
+  border: 1px solid #e7efee;
+  border-radius: 19px;
+  background: #fff;
+  box-shadow: 0 6px 24px rgba(27, 72, 74, .045);
+}
+
+.find-doctors-search-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 15px;
+}
+
+.find-doctors-search-heading h2,
+.find-doctors-results-heading h2 {
+  margin: 7px 0 5px;
+  color: #193e45;
+  font-size: 19px;
+  font-weight: 750;
+  letter-spacing: -.35px;
+}
+
+.find-doctors-search-heading p,
+.find-doctors-results-heading p {
+  margin: 0;
+  color: #829397;
+  font-size: 12px;
+  line-height: 1.6;
+}
+
+.find-doctors-count {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  flex-shrink: 0;
+  gap: 3px;
+}
+
+.find-doctors-count strong {
+  color: #168b83;
+  font-size: 25px;
+  font-weight: 800;
+}
+
+.find-doctors-count span {
+  color: #819598;
+  font-size: 10px;
+  font-weight: 650;
+}
+
+.find-doctors-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 220px;
+  gap: 13px;
+  margin-top: 21px;
+}
+
+.find-doctors-search {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  min-height: 47px;
+  padding: 0 15px;
+  border: 1px solid #e1ece9;
+  border-radius: 11px;
+  background: #fbfdfc;
+  color: #8aa09e;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.find-doctors-search:focus-within,
+.find-doctors-specialization:focus-within {
+  border-color: #71c8b9;
+  box-shadow: 0 0 0 3px rgba(36,165,145,.08);
+}
+
+.find-doctors-search input {
+  width: 100%;
+  min-width: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #294c52;
+  font-family: inherit;
+  font-size: 12px;
+}
+
+.find-doctors-search input::placeholder {
+  color: #9aabad;
+}
+
+.find-doctors-specialization {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 3px;
+  min-height: 47px;
+  padding: 5px 12px;
+  border: 1px solid #e1ece9;
+  border-radius: 11px;
+  background: #fbfdfc;
+  transition: border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.find-doctors-specialization span {
+  color: #8a9c9d;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .5px;
+}
+
+.find-doctors-specialization select {
+  width: 100%;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: #31565a;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.find-doctors-results {
+  padding: 23px 25px;
+}
+
+.find-doctors-results-heading {
+  margin-bottom: 19px;
+}
+
+.find-doctors-results-heading h2 {
+  margin-top: 0;
+  font-size: 18px;
+}
+
+.find-doctors-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 285px;
+  padding: 35px 20px;
+  text-align: center;
+}
+
+.find-doctors-state-icon {
+  display: grid;
+  place-items: center;
+  width: 62px;
+  height: 62px;
+  margin-bottom: 17px;
+  border: 1px solid #d7eee7;
+  border-radius: 19px;
+  background: #eaf8f4;
+  color: #168b83;
+}
+
+.find-doctors-state-icon.error {
+  border-color: #f6dfdc;
+  background: #fff0ef;
+  color: #d45d55;
+}
+
+.find-doctors-state h3 {
+  margin: 0 0 8px;
+  color: #294b50;
+  font-size: 17px;
+  font-weight: 750;
+}
+
+.find-doctors-state p {
+  max-width: 430px;
+  margin: 0;
+  color: #87999c;
+  font-size: 12px;
+  line-height: 1.8;
+}
+
+.find-doctors-retry {
+  margin-top: 18px;
+  padding: 10px 17px;
+  border: 1px solid #bfe5dc;
+  border-radius: 9px;
+  background: #eaf8f4;
+  color: #147e76;
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 750;
+  cursor: pointer;
+}
+
+.find-doctors-retry:hover {
+  background: #d9f1e9;
+}
+
+.find-doctors-spinner {
+  width: 31px;
+  height: 31px;
+  margin-bottom: 17px;
+  border: 3px solid #dcefeb;
+  border-top-color: #168b83;
+  border-radius: 50%;
+  animation: find-doctors-spin 750ms linear infinite;
+}
+
+@keyframes find-doctors-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.find-doctors-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 17px;
+}
+
+.find-doctor-card {
+  min-width: 0;
+  padding: 19px;
+  border: 1px solid #e5efec;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #fff 70%, #f9fdfb);
+  transition: border-color 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.find-doctor-card:hover {
+  transform: translateY(-3px);
+  border-color: #c6e6dd;
+  box-shadow: 0 9px 22px rgba(26, 74, 75, .065);
+}
+
+.find-doctor-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.find-doctor-avatar {
+  display: grid;
+  place-items: center;
+  width: 51px;
+  height: 51px;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #e6f7f1, #d9f0e8);
+  color: #168b83;
+}
+
+.find-doctor-verified {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 6px 9px;
+  border: 1px solid #d6eee4;
+  border-radius: 20px;
+  background: #effaf5;
+  color: #328a67;
+  font-size: 10px;
+  font-weight: 750;
+}
+
+.find-doctor-card h3 {
+  margin: 0 0 5px;
+  color: #23464b;
+  font-size: 16px;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.find-doctor-specialty {
+  display: inline-block;
+  color: #168b83;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.find-doctor-qualification {
+  display: flex;
+  align-items: flex-start;
+  gap: 7px;
+  margin: 13px 0;
+  color: #72898b;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.find-doctor-qualification svg {
+  flex-shrink: 0;
+  color: #8d9e9d;
+}
+
+.find-doctor-details {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 13px;
+  border: 1px solid #edf2f0;
+  border-radius: 10px;
+  background: #fbfdfc;
+}
+
+.find-doctor-details > span {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #587477;
+  font-size: 11px;
+  font-weight: 650;
+  overflow-wrap: anywhere;
+}
+
+.find-doctor-details svg {
+  flex-shrink: 0;
+  color: #168b83;
+}
+
+.find-doctor-details small {
+  color: #91a2a3;
+  font-size: 10px;
+}
+
+.find-doctor-bio {
+  margin: 13px 0 0;
+  color: #7a9091;
+  font-size: 11px;
+  line-height: 1.7;
+}
+
+.find-doctor-card-footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  justify-content: space-between;
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid #edf2f0;
+}
+
+.find-doctor-card-footer span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #819595;
+  font-size: 9px;
+  font-weight: 650;
+}
+
+.find-doctor-card-footer svg {
+  color: #168b83;
+}
+
+.find-doctors-help-note {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 17px 19px;
+  border: 1px solid #dceee9;
+  border-radius: 14px;
+  background: linear-gradient(110deg, #f0faf7, #f8fcfb);
+  color: #168b83;
+}
+
+.find-doctors-help-note > svg {
+  flex-shrink: 0;
+}
+
+.find-doctors-help-note > div {
+  flex: 1;
+  min-width: 0;
+}
+
+.find-doctors-help-note strong {
+  display: block;
+  margin-bottom: 4px;
+  color: #31675f;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.find-doctors-help-note p {
+  margin: 0;
+  color: #819895;
+  font-size: 11px;
+  line-height: 1.6;
+}
+
+.find-doctors-help-note a {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+  color: #168b83;
+  font-size: 11px;
+  font-weight: 750;
+  text-decoration: none;
+}
+
+.find-doctors-help-note a:hover {
+  color: #0c6d65;
+}
+
+@media (max-width: 1050px) {
+  .find-doctors-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
+  .find-doctors-page {
+    gap: 18px;
+  }
+
+  .find-doctors-hero {
+    min-height: auto;
+    padding: 24px 20px;
+  }
+
+  .find-doctors-hero-icon {
+    display: none;
+  }
+
+  .find-doctors-hero-trust {
+    gap: 11px;
+  }
+
+  .find-doctors-search-section,
+  .find-doctors-results {
+    padding: 19px 16px;
+  }
+
+  .find-doctors-controls {
+    grid-template-columns: 1fr;
+  }
+
+  .find-doctors-search-heading {
+    align-items: flex-start;
+  }
+
+  .find-doctors-help-note {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .find-doctors-help-note > div {
+    flex-basis: calc(100% - 40px);
+  }
+
+  .find-doctors-help-note a {
+    margin-left: 32px;
+  }
+}
+
+@media (max-width: 390px) {
+  .find-doctors-search-heading {
+    flex-direction: column;
+  }
+
+  .find-doctors-count {
+    align-items: flex-start;
+  }
+}
+
+/* ========================================================
+   BOOKING MODAL STYLES & BOOK ACTION
+   ======================================================== */
+
+.find-doctor-book-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border: none;
+  border-radius: 9px;
+  background: linear-gradient(135deg, #168b83, #0f6c65);
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 750;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 6px rgba(22, 139, 131, 0.25);
+}
+
+.find-doctor-book-action:hover {
+  background: linear-gradient(135deg, #127972, #0d5d57);
+  box-shadow: 0 4px 10px rgba(22, 139, 131, 0.35);
+  transform: translateY(-1px);
+}
+
+.find-doctor-book-action svg {
+  color: #ffffff !important;
+}
+
+.booking-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(18, 44, 49, 0.65);
+  backdrop-filter: blur(4px);
+  animation: modalFadeIn 0.2s ease-out forwards;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.booking-modal {
+  position: relative;
+  width: 100%;
+  max-width: 580px;
+  max-height: 90vh;
+  overflow-y: auto;
+  padding: 32px;
+  border: 1px solid #d5e9e3;
+  border-radius: 24px;
+  background: #ffffff;
+  box-shadow: 0 20px 45px rgba(24, 59, 67, 0.22);
+  animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+@keyframes modalSlideUp {
+  from {
+    transform: translateY(20px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.booking-modal-close {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border: 1px solid #e1ece9;
+  border-radius: 10px;
+  background: #f7fbfa;
+  color: #557774;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.booking-modal-close:hover:not(:disabled) {
+  border-color: #c9ddd8;
+  background: #edf6f4;
+  color: #183b43;
+}
+
+.booking-modal-close:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.booking-modal-header {
+  margin-bottom: 20px;
+}
+
+.booking-modal-kicker {
+  display: inline-block;
+  margin-bottom: 6px;
+  color: #168b83;
+  font-size: 10px;
+  font-weight: 850;
+  letter-spacing: 1.4px;
+}
+
+.booking-modal-header h2 {
+  margin: 0 0 6px;
+  color: #183b43;
+  font-size: 22px;
+  font-weight: 780;
+  letter-spacing: -0.6px;
+}
+
+.booking-modal-header p {
+  margin: 0;
+  color: #66827f;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.booking-doctor-brief {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 22px;
+  padding: 14px 16px;
+  border: 1px solid #e1efe9;
+  border-radius: 14px;
+  background: #f7fcfb;
+}
+
+.booking-doctor-avatar {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #e4f5ee;
+  color: #168b83;
+}
+
+.booking-doctor-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.booking-doctor-meta h3 {
+  margin: 0 0 3px;
+  color: #183b43;
+  font-size: 15px;
+  font-weight: 750;
+}
+
+.booking-doctor-meta span {
+  display: block;
+  color: #698582;
+  font-size: 12px;
+}
+
+.booking-doctor-meta .booking-fee {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  margin-top: 4px;
+  color: #168b83;
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.booking-error-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-bottom: 20px;
+  padding: 12px 14px;
+  border: 1px solid #f9d3cf;
+  border-radius: 12px;
+  background: #fdf5f4;
+  color: #b73228;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.booking-error-alert svg {
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.booking-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.booking-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.booking-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  color: #183b43;
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.booking-label small {
+  color: #7b9491;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.booking-date-input {
+  width: 100%;
+  padding: 11px 14px;
+  border: 1px solid #cce4de;
+  border-radius: 11px;
+  background: #fcfefe;
+  color: #183b43;
+  font-size: 13px;
+  font-weight: 600;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.booking-date-input:focus {
+  border-color: #168b83;
+  box-shadow: 0 0 0 3px rgba(22, 139, 131, 0.12);
+}
+
+.booking-slots-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.slots-count {
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: #e2f4ed;
+  color: #168b83;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.slots-refresh-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 8px;
+  border: 1px solid #d4e8e2;
+  border-radius: 7px;
+  background: #ffffff;
+  color: #49716b;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.slots-refresh-btn:hover:not(:disabled) {
+  border-color: #168b83;
+  color: #168b83;
+}
+
+.slots-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.slots-loading,
+.slots-empty,
+.slots-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 24px 16px;
+  border: 1px dashed #d5e9e2;
+  border-radius: 12px;
+  background: #f9fdfc;
+  color: #658481;
+  font-size: 12px;
+}
+
+.slots-loading {
+  flex-direction: row;
+  gap: 10px;
+  color: #168b83;
+  font-weight: 650;
+}
+
+.slots-empty svg {
+  color: #8da6a3;
+  margin-bottom: 6px;
+}
+
+.slots-empty p {
+  margin: 0 0 3px;
+  color: #183b43;
+  font-weight: 650;
+}
+
+.slots-empty span {
+  color: #7b9491;
+  font-size: 11px;
+}
+
+.slots-error {
+  flex-direction: row;
+  gap: 8px;
+  border-color: #f7d2cf;
+  background: #fdf7f6;
+  color: #b73228;
+}
+
+.slots-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: 8px;
+  max-height: 190px;
+  overflow-y: auto;
+  padding: 2px;
+}
+
+.slot-chip {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid #d2e7e1;
+  border-radius: 10px;
+  background: #ffffff;
+  color: #183b43;
+  font-size: 12px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.slot-chip svg {
+  color: #648984;
+}
+
+.slot-chip:hover:not(:disabled) {
+  border-color: #168b83;
+  background: #f0faf6;
+  color: #168b83;
+}
+
+.slot-chip:hover:not(:disabled) svg {
+  color: #168b83;
+}
+
+.slot-chip.selected {
+  border-color: #168b83;
+  background: #168b83;
+  color: #ffffff;
+  box-shadow: 0 3px 8px rgba(22, 139, 131, 0.28);
+}
+
+.slot-chip.selected svg {
+  color: #ffffff;
+}
+
+.booking-reason-input {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid #cce4de;
+  border-radius: 11px;
+  background: #fcfefe;
+  color: #183b43;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+  resize: vertical;
+  outline: none;
+  transition: all 0.15s ease;
+}
+
+.booking-reason-input:focus {
+  border-color: #168b83;
+  box-shadow: 0 0 0 3px rgba(22, 139, 131, 0.12);
+}
+
+.booking-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 10px;
+}
+
+.booking-btn-secondary {
+  padding: 11px 18px;
+  border: 1px solid #d5e6e1;
+  border-radius: 11px;
+  background: #ffffff;
+  color: #496d67;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.booking-btn-secondary:hover:not(:disabled) {
+  border-color: #b9d5cd;
+  background: #f4faf8;
+  color: #183b43;
+}
+
+.booking-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 11px 22px;
+  border: none;
+  border-radius: 11px;
+  background: linear-gradient(135deg, #168b83, #0f6c65);
+  color: #ffffff;
+  font-size: 13px;
+  font-weight: 750;
+  text-decoration: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 3px 10px rgba(22, 139, 131, 0.25);
+}
+
+.booking-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #127972, #0d5d57);
+  box-shadow: 0 5px 14px rgba(22, 139, 131, 0.35);
+  transform: translateY(-1px);
+}
+
+.booking-btn-primary:disabled,
+.booking-btn-secondary:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* SUCCESS MODAL STYLES */
+.booking-modal-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 12px 6px;
+}
+
+.booking-success-icon {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  margin-bottom: 16px;
+  border-radius: 50%;
+  background: #e2f6ee;
+  color: #168b83;
+}
+
+.booking-modal-success h2 {
+  margin: 0 0 10px;
+  color: #183b43;
+  font-size: 22px;
+  font-weight: 780;
+}
+
+.booking-success-summary {
+  max-width: 440px;
+  margin: 0 0 22px;
+  color: #557774;
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.booking-success-card {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 420px;
+  margin-bottom: 24px;
+  padding: 16px;
+  border: 1px solid #d8eee7;
+  border-radius: 14px;
+  background: #f7fcfb;
+  text-align: left;
+}
+
+.booking-success-card > div {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+}
+
+.booking-success-card span {
+  color: #7b9693;
+}
+
+.booking-success-card strong {
+  color: #183b43;
+}
+
+.booking-success-card .status-booked {
+  color: #168b83;
+  font-weight: 750;
+}
+
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.spinner {
+  animation: spin 1s linear infinite;
+}
+
+@media (max-width: 580px) {
+  .booking-modal {
+    padding: 24px 18px;
+    border-radius: 20px;
+  }
+
+  .booking-modal-actions {
+    flex-direction: column-reverse;
+    width: 100%;
+  }
+
+  .booking-modal-actions button,
+  .booking-modal-actions a {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .slots-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

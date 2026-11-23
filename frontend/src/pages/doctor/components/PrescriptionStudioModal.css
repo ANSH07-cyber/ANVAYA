@@ -1,0 +1,803 @@
+/* ==========================================================================
+   ANVAYA Doctor Portal — Digital Prescription Studio Composer CSS
+   Theme: Premium Clinical White surfaces, Deep Navy typography, Precision Teal
+   ========================================================================== */
+
+/* Overlay */
+.rx-composer-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(12, 25, 31, 0.65);
+  backdrop-filter: blur(4px);
+  z-index: 1200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  animation: rxFadeIn 0.2s ease-out;
+}
+
+@keyframes rxFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes rxZoomIn {
+  from {
+    transform: scale(0.97) translateY(8px);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1) translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Modal Shell */
+.rx-composer-modal {
+  width: 100%;
+  max-width: 860px;
+  max-height: 92vh;
+  background: #ffffff;
+  border: 1px solid #dce8e4;
+  border-radius: 16px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 64px rgba(12, 25, 31, 0.22);
+  animation: rxZoomIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+}
+
+/* Header */
+.rx-composer-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 20px 28px;
+  background: #ffffff;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.rx-composer-header-left {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rx-composer-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0c8b82;
+}
+
+.rx-composer-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #0c191f;
+  letter-spacing: -0.02em;
+}
+
+.rx-composer-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: #64748b;
+  line-height: 1.4;
+}
+
+.rx-composer-header-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-shrink: 0;
+}
+
+.rx-composer-step-indicator {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: #f8fafc;
+  padding: 4px 10px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.rx-step-pill {
+  color: #94a3b8;
+  transition: all 0.15s ease;
+}
+
+.rx-step-pill.active {
+  color: #0c8b82;
+  font-weight: 700;
+}
+
+.rx-step-pill.complete {
+  color: #0f172a;
+}
+
+.rx-step-arrow {
+  color: #cbd5e1;
+  font-size: 13px;
+}
+
+.rx-composer-close-btn {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  color: #64748b;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rx-composer-close-btn:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+  border-color: #cbd5e1;
+}
+
+/* Alert Banner */
+.rx-composer-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 16px 28px 0;
+  padding: 10px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  line-height: 1.4;
+}
+
+.rx-composer-alert-error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+/* Form and Body */
+.rx-composer-form,
+.rx-composer-review {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.rx-composer-body {
+  flex: 1;
+  overflow-y: auto;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  background: #f8fafc;
+}
+
+/* Custom Scrollbar */
+.rx-composer-body::-webkit-scrollbar {
+  width: 6px;
+}
+
+.rx-composer-body::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+.rx-composer-body::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+  border-radius: 4px;
+}
+
+.rx-composer-body::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+
+/* Section Cards */
+.rx-section-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rx-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 12px;
+}
+
+.rx-section-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rx-section-icon {
+  color: #0c8b82;
+}
+
+.rx-section-title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.rx-item-count-badge {
+  font-size: 11px;
+  font-weight: 700;
+  color: #0c8b82;
+  background: #ebf7f5;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.rx-char-counter {
+  font-size: 11.5px;
+  color: #94a3b8;
+  font-weight: 500;
+}
+
+/* Field Group & Labels */
+.rx-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.rx-field-label {
+  font-size: 12px;
+  font-weight: 700;
+  color: #334155;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.rx-field-label.required::after {
+  content: "*";
+  color: #ef4444;
+  font-size: 13px;
+}
+
+.rx-input,
+.rx-textarea {
+  width: 100%;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 9px 12px;
+  font-size: 13px;
+  color: #0f172a;
+  outline: none;
+  transition: all 0.15s ease;
+  font-family: inherit;
+  box-sizing: border-box;
+}
+
+.rx-input:focus,
+.rx-textarea:focus {
+  border-color: #0c8b82;
+  box-shadow: 0 0 0 3px rgba(12, 139, 130, 0.12);
+}
+
+.rx-input::placeholder,
+.rx-textarea::placeholder {
+  color: #94a3b8;
+  font-size: 12.5px;
+}
+
+.rx-input-error {
+  border-color: #ef4444 !important;
+  background: #fffafa;
+}
+
+.rx-input-error:focus {
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.12) !important;
+}
+
+.rx-error-text {
+  font-size: 11.5px;
+  color: #dc2626;
+  font-weight: 600;
+}
+
+.rx-textarea {
+  resize: vertical;
+  line-height: 1.5;
+}
+
+.rx-textarea-sm {
+  min-height: 60px;
+}
+
+/* Grids */
+.rx-grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+}
+
+.rx-grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 14px;
+}
+
+/* Medicine Cards List */
+.rx-medicine-cards-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.rx-med-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid #0c8b82;
+  border-radius: 10px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  overflow: hidden;
+  transition: all 0.15s ease;
+}
+
+.rx-med-card:hover {
+  border-color: #cbd5e1;
+  border-left-color: #0c8b82;
+  box-shadow: 0 4px 12px rgba(12, 25, 31, 0.04);
+}
+
+.rx-med-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 16px;
+  background: #f8fafc;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.rx-med-card-index {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rx-med-index-badge {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #0c8b82;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+}
+
+.rx-med-index-label {
+  font-size: 12.5px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.rx-med-remove-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #ef4444;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rx-med-remove-btn:hover:not(:disabled) {
+  background: #fee2e2;
+  border-color: #fca5a5;
+}
+
+.rx-med-remove-btn:disabled {
+  color: #cbd5e1;
+  cursor: not-allowed;
+}
+
+.rx-med-card-body {
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.rx-add-bottom-row {
+  display: flex;
+  justify-content: center;
+  padding-top: 8px;
+}
+
+/* Footer Actions */
+.rx-composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 28px;
+  background: #ffffff;
+  border-top: 1px solid #e2e8f0;
+}
+
+.rx-footer-note {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+.rx-footer-icon {
+  color: #0c8b82;
+  flex-shrink: 0;
+}
+
+.rx-footer-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+
+/* Button System */
+.rx-btn-primary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: #0c8b82;
+  color: #ffffff;
+  border: 1px solid transparent;
+  padding: 10px 18px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  box-shadow: 0 1px 2px rgba(12, 139, 130, 0.2);
+}
+
+.rx-btn-primary:hover {
+  background: #096f68;
+}
+
+.rx-btn-success {
+  background: #0c8b82;
+}
+
+.rx-btn-success:hover {
+  background: #08615b;
+}
+
+.rx-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: #ffffff;
+  color: #0c8b82;
+  border: 1px solid #cbd5e1;
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rx-btn-secondary:hover:not(:disabled) {
+  background: #f1f5f9;
+  border-color: #0c8b82;
+}
+
+.rx-btn-secondary:disabled {
+  color: #94a3b8;
+  border-color: #e2e8f0;
+  background: #f8fafc;
+  cursor: not-allowed;
+}
+
+.rx-btn-sm {
+  padding: 6px 11px;
+  font-size: 12px;
+}
+
+.rx-btn-ghost {
+  background: transparent;
+  border: 1px solid transparent;
+  color: #64748b;
+  padding: 9px 14px;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rx-btn-ghost:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+/* ======================================================== */
+/* REVIEW MODE STYLING                                      */
+/* ======================================================== */
+
+.rx-review-notice {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #ebf7f5;
+  border: 1px solid #c2ece5;
+  border-radius: 10px;
+  padding: 14px 18px;
+}
+
+.rx-review-notice-icon {
+  color: #0c8b82;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.rx-review-notice-title {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 3px;
+}
+
+.rx-review-notice-text {
+  margin: 0;
+  font-size: 12.5px;
+  color: #334155;
+  line-height: 1.5;
+}
+
+.rx-review-card {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 18px 20px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rx-review-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 10px;
+}
+
+.rx-review-card-title {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 700;
+  color: #0f172a;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rx-review-summary-chip {
+  font-size: 11px;
+  font-weight: 700;
+  background: #f1f5f9;
+  color: #475569;
+  padding: 2px 8px;
+  border-radius: 6px;
+}
+
+.rx-review-notes-content {
+  margin: 0;
+  font-size: 13px;
+  color: #334155;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  background: #f8fafc;
+  padding: 12px 14px;
+  border-radius: 8px;
+  border: 1px solid #f1f5f9;
+}
+
+.rx-review-items-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rx-review-item-card {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rx-review-item-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.rx-review-index {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: #0c8b82;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.rx-review-item-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  flex: 1;
+}
+
+.rx-review-med-name {
+  margin: 0;
+  font-size: 14px;
+  font-weight: 800;
+  color: #0c191f;
+  letter-spacing: -0.01em;
+}
+
+.rx-review-pill-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rx-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 11.5px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+.rx-tag strong {
+  color: #0f172a;
+}
+
+.rx-tag.dosage {
+  border-color: #c2ece5;
+  background: #ebf7f5;
+  color: #0c8b82;
+}
+
+.rx-tag.dosage strong {
+  color: #0c8b82;
+}
+
+.rx-review-item-instructions {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font-size: 12px;
+  color: #475569;
+  line-height: 1.5;
+  margin-left: 34px;
+}
+
+.rx-review-inst-label {
+  font-weight: 700;
+  color: #0f172a;
+  flex-shrink: 0;
+}
+
+.rx-review-inst-text {
+  color: #334155;
+}
+
+/* ======================================================== */
+/* RESPONSIVE BREAKPOINTS                                   */
+/* ======================================================== */
+
+@media (max-width: 768px) {
+  .rx-composer-overlay {
+    padding: 12px;
+  }
+
+  .rx-composer-modal {
+    max-height: 96vh;
+    border-radius: 12px;
+  }
+
+  .rx-composer-header {
+    padding: 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .rx-composer-header-right {
+    justify-content: space-between;
+  }
+
+  .rx-composer-body {
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .rx-grid-3,
+  .rx-grid-2 {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .rx-composer-footer {
+    padding: 14px 16px;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .rx-footer-note {
+    justify-content: center;
+    text-align: center;
+  }
+
+  .rx-footer-actions {
+    flex-direction: column-reverse;
+  }
+
+  .rx-footer-actions button {
+    width: 100%;
+  }
+
+  .rx-review-item-instructions {
+    margin-left: 0;
+  }
+}
+

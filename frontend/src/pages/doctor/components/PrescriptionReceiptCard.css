@@ -1,0 +1,369 @@
+/* ==========================================================================
+   ANVAYA Doctor Portal — Official Prescription Receipt CSS
+   ========================================================================== */
+
+.rx-receipt-card {
+  background: #ffffff;
+  border: 1px solid #dce8e4;
+  border-radius: 14px;
+  box-shadow: 0 4px 16px rgba(12, 25, 31, 0.04);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px 28px;
+  animation: rxFadeIn 0.25s ease-out;
+}
+
+/* Header */
+.rx-receipt-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 16px;
+}
+
+.rx-receipt-branding {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rx-receipt-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0c8b82;
+}
+
+.rx-receipt-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 800;
+  color: #0c191f;
+  letter-spacing: -0.02em;
+}
+
+.rx-receipt-subtitle {
+  font-size: 12.5px;
+  color: #64748b;
+}
+
+.rx-receipt-print-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #ffffff;
+  color: #0c8b82;
+  border: 1px solid #cbd5e1;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12.5px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.rx-receipt-print-btn:hover {
+  background: #f1f5f9;
+  border-color: #0c8b82;
+}
+
+/* Banner */
+.rx-receipt-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  background: #ebf7f5;
+  border: 1px solid #c2ece5;
+  border-radius: 10px;
+  padding: 12px 16px;
+}
+
+.rx-receipt-banner-icon {
+  color: #0c8b82;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.rx-receipt-banner-text strong {
+  display: block;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0f172a;
+  margin-bottom: 2px;
+}
+
+.rx-receipt-banner-text p {
+  margin: 0;
+  font-size: 12px;
+  color: #334155;
+  line-height: 1.45;
+}
+
+/* Metadata Grid */
+.rx-receipt-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 14px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 16px;
+}
+
+.rx-receipt-meta-item {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.rx-receipt-meta-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+.rx-receipt-meta-val {
+  font-size: 13px;
+  color: #0f172a;
+}
+
+.rx-receipt-code {
+  font-family: monospace;
+  font-size: 12px;
+  color: #0c8b82;
+  font-weight: 700;
+}
+
+/* Medications Section */
+.rx-receipt-meds-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.rx-receipt-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid #f1f5f9;
+  padding-bottom: 8px;
+}
+
+.rx-receipt-section-title-wrap {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.rx-receipt-section-icon {
+  color: #0c8b82;
+}
+
+.rx-receipt-section-title {
+  margin: 0;
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.rx-receipt-rx-symbol {
+  font-family: serif;
+  font-size: 20px;
+  font-weight: 700;
+  color: #0c8b82;
+}
+
+.rx-receipt-meds-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.rx-receipt-med-item {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-left: 3px solid #0c8b82;
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rx-receipt-med-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.rx-receipt-med-num {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #0c8b82;
+  color: #ffffff;
+  font-size: 11px;
+  font-weight: 800;
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.rx-receipt-med-name-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 1;
+}
+
+.rx-receipt-med-name {
+  margin: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  color: #0c191f;
+}
+
+.rx-receipt-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.rx-receipt-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  font-size: 11px;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  color: #334155;
+}
+
+.rx-receipt-tag.dosage {
+  border-color: #c2ece5;
+  background: #ebf7f5;
+  color: #0c8b82;
+}
+
+.rx-receipt-tag.dosage strong {
+  color: #0c8b82;
+}
+
+.rx-receipt-instructions {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+  background: #ffffff;
+  border: 1px dashed #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 11.5px;
+  margin-left: 30px;
+}
+
+.rx-receipt-inst-label {
+  font-weight: 700;
+  color: #0f172a;
+  flex-shrink: 0;
+}
+
+.rx-receipt-inst-text {
+  margin: 0;
+  color: #334155;
+}
+
+/* Clinical Notes */
+.rx-receipt-notes-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 14px 16px;
+}
+
+.rx-receipt-notes-body p {
+  margin: 0;
+  font-size: 12.5px;
+  color: #334155;
+  line-height: 1.5;
+  white-space: pre-wrap;
+}
+
+/* Footer */
+.rx-receipt-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid #f1f5f9;
+  padding-top: 14px;
+  font-size: 11.5px;
+  color: #64748b;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .rx-receipt-card {
+    padding: 16px;
+  }
+
+  .rx-receipt-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .rx-receipt-meta-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .rx-receipt-instructions {
+    margin-left: 0;
+  }
+
+  .rx-receipt-footer {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Print Optimization */
+@media print {
+  body * {
+    visibility: hidden;
+  }
+
+  .rx-receipt-card,
+  .rx-receipt-card * {
+    visibility: visible;
+  }
+
+  .rx-receipt-card {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    border: none;
+    box-shadow: none;
+    padding: 0;
+  }
+
+  .rx-receipt-print-btn {
+    display: none !important;
+  }
+}
+

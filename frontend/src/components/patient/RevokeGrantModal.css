@@ -1,0 +1,389 @@
+/* ==========================================================================
+   ANVAYA Patient Portal — Individual Grant Revocation Modal Styling
+   Theme: Controlled destructive warning palette (#dc2626 / #b91c1c / #183b43)
+   ========================================================================== */
+
+.revoke-grant-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 33, 37, 0.68);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  z-index: 1250;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  padding-top: max(16px, env(safe-area-inset-top));
+  padding-bottom: max(16px, env(safe-area-inset-bottom));
+  padding-left: max(16px, env(safe-area-inset-left));
+  padding-right: max(16px, env(safe-area-inset-right));
+  animation: revokeGrantFadeIn 0.2s ease-out;
+  box-sizing: border-box;
+}
+
+.revoke-grant-modal {
+  width: 100%;
+  max-width: 580px;
+  max-height: calc(100vh - 32px);
+  max-height: calc(100dvh - 32px);
+  background: #ffffff;
+  border: 1px solid #fed7aa;
+  border-top: 4px solid #ea580c;
+  border-radius: 18px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 24px 60px rgba(24, 59, 67, 0.22), 0 4px 16px rgba(234, 88, 12, 0.08);
+  animation: revokeGrantZoomIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  overflow: hidden;
+  box-sizing: border-box;
+  color: #183b43;
+}
+
+@keyframes revokeGrantFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes revokeGrantZoomIn {
+  from { transform: scale(0.96); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+
+/* Header */
+.revoke-grant-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 20px 24px 16px;
+  background: #ffffff;
+  border-bottom: 1px solid #f1f5f9;
+  flex-shrink: 0;
+  gap: 16px;
+}
+
+.revoke-grant-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.revoke-grant-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #c2410c;
+}
+
+.revoke-grant-header h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 750;
+  color: #183b43;
+  line-height: 1.3;
+}
+
+.revoke-grant-subtitle {
+  margin: 0;
+  font-size: 0.82rem;
+  color: #64748b;
+  line-height: 1.45;
+}
+
+.revoke-grant-close-btn {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 8px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+}
+
+.revoke-grant-close-btn:hover:not(:disabled) {
+  color: #1e293b;
+  background: #f1f5f9;
+}
+
+.revoke-grant-close-btn:focus-visible {
+  outline: 2px solid #ea580c;
+  outline-offset: 2px;
+}
+
+/* Body */
+.revoke-grant-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  flex: 1;
+}
+
+/* Doctor Banner */
+.revoke-grant-doctor-banner {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 16px;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+}
+
+.revoke-grant-doc-avatar {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: #eef8f5;
+  color: #168b83;
+  flex-shrink: 0;
+}
+
+.revoke-grant-doc-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+  flex: 1;
+}
+
+.revoke-grant-doc-name {
+  font-size: 0.98rem;
+  font-weight: 750;
+  color: #173e45;
+}
+
+.revoke-grant-doc-meta {
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.revoke-grant-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 3px;
+  font-size: 0.74rem;
+  color: #64748b;
+}
+
+.revoke-grant-date-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.revoke-grant-id-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  background: #e2e8f0;
+  border-radius: 4px;
+  font-family: monospace;
+  font-size: 0.7rem;
+  color: #475569;
+}
+
+/* Scopes Box */
+.revoke-grant-scopes-box {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.revoke-grant-scopes-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.78rem;
+  font-weight: 750;
+  color: #334155;
+}
+
+.revoke-grant-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.revoke-grant-chip {
+  display: inline-block;
+  padding: 3px 9px;
+  background: #fee2e2;
+  border: 1px solid #fecaca;
+  border-radius: 6px;
+  font-size: 0.76rem;
+  font-weight: 650;
+  color: #991b1b;
+}
+
+/* Advisory Card */
+.revoke-grant-advisory-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: #fff7ed;
+  border: 1px solid #ffedd5;
+  border-left: 3.5px solid #ea580c;
+  border-radius: 10px;
+  color: #9a3412;
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.revoke-grant-advisory-icon {
+  color: #ea580c;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.revoke-grant-advisory-text strong {
+  display: block;
+  font-size: 0.84rem;
+  margin-bottom: 3px;
+  color: #7c2d12;
+}
+
+.revoke-grant-advisory-text p {
+  margin: 0;
+}
+
+.revoke-grant-overlap-notice {
+  margin-top: 6px !important;
+  padding-top: 6px;
+  border-top: 1px solid #fed7aa;
+  color: #9a3412;
+}
+
+/* Alerts */
+.revoke-grant-alert {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  font-size: 0.8rem;
+}
+
+.revoke-grant-alert.error {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #991b1b;
+}
+
+.revoke-grant-alert-content {
+  flex: 1;
+}
+
+.revoke-grant-alert-content strong {
+  display: block;
+  font-size: 0.82rem;
+  margin-bottom: 2px;
+}
+
+.revoke-grant-alert-content p {
+  margin: 0;
+}
+
+.revoke-grant-alert-dismiss {
+  background: transparent;
+  border: none;
+  color: #991b1b;
+  cursor: pointer;
+  padding: 2px;
+}
+
+/* Footer */
+.revoke-grant-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 16px 24px;
+  background: #f8fafc;
+  border-top: 1px solid #f1f5f9;
+  flex-shrink: 0;
+}
+
+.revoke-grant-btn-secondary {
+  padding: 9px 18px;
+  font-size: 0.85rem;
+  font-weight: 650;
+  color: #475569;
+  background: #ffffff;
+  border: 1.5px solid #cbd5e1;
+  border-radius: 9px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.revoke-grant-btn-secondary:hover:not(:disabled) {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.revoke-grant-btn-secondary:focus-visible {
+  outline: 2px solid #ea580c;
+  outline-offset: 2px;
+}
+
+.revoke-grant-btn-danger {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 20px;
+  font-size: 0.85rem;
+  font-weight: 750;
+  color: #ffffff;
+  background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+  border: none;
+  border-radius: 9px;
+  cursor: pointer;
+  box-shadow: 0 3px 10px rgba(220, 38, 38, 0.25);
+  transition: all 0.15s ease;
+}
+
+.revoke-grant-btn-danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 5px 14px rgba(220, 38, 38, 0.32);
+}
+
+.revoke-grant-btn-danger:disabled {
+  background: #fca5a5;
+  cursor: not-allowed;
+  box-shadow: none;
+  transform: none;
+}
+
+.revoke-grant-spin {
+  animation: revokeGrantSpin 0.9s linear infinite;
+}
+
+@keyframes revokeGrantSpin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 600px) {
+  .revoke-grant-footer {
+    flex-direction: column-reverse;
+  }
+  .revoke-grant-btn-secondary,
+  .revoke-grant-btn-danger {
+    width: 100%;
+    justify-content: center;
+  }
+}

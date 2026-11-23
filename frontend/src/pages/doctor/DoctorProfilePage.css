@@ -1,0 +1,849 @@
+/* ==========================================================================
+   ANVAYA Doctor Portal — Practice Profile & Medical Credentials Styling
+   Clinical dark theme: #070d18 / #0b1528 / #0ea5e9 / #14b8a6
+   ========================================================================== */
+
+.doc-profile-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 1440px;
+  margin: 0 auto;
+  width: 100%;
+}
+
+/* --------------------------------------------------------------------------
+   Header & Title Bar
+   -------------------------------------------------------------------------- */
+.doc-profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20px;
+  flex-wrap: wrap;
+  padding: 24px 28px;
+  background: linear-gradient(135deg, #0b1528 0%, #0d1b33 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+}
+
+.doc-profile-title-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.doc-profile-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #0ea5e9;
+}
+
+.doc-profile-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.02em;
+}
+
+.doc-profile-subtitle {
+  font-size: 0.88rem;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.doc-profile-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* --------------------------------------------------------------------------
+   Buttons
+   -------------------------------------------------------------------------- */
+.doc-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 9px 18px;
+  font-size: 0.84rem;
+  font-weight: 600;
+  border-radius: 9px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease-in-out;
+  text-decoration: none;
+  line-height: 1.3;
+}
+
+.doc-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.doc-btn-primary {
+  background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
+  color: #ffffff;
+  box-shadow: 0 4px 12px rgba(14, 165, 233, 0.25);
+}
+
+.doc-btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0369a1 0%, #0284c7 100%);
+  box-shadow: 0 6px 16px rgba(14, 165, 233, 0.35);
+  transform: translateY(-1px);
+}
+
+.doc-btn-outline {
+  background: rgba(255, 255, 255, 0.04);
+  color: #e2e8f0;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.doc-btn-outline:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.24);
+  color: #ffffff;
+}
+
+.doc-btn-ghost {
+  background: transparent;
+  color: #94a3b8;
+  border: 1px solid transparent;
+}
+
+.doc-btn-ghost:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.05);
+  color: #ffffff;
+}
+
+/* --------------------------------------------------------------------------
+   Verification Status Banners
+   -------------------------------------------------------------------------- */
+.doc-profile-status-banner {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 16px 20px;
+  border-radius: 12px;
+  position: relative;
+  overflow: hidden;
+}
+
+.doc-profile-status-banner.approved {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.12) 0%, rgba(5, 150, 105, 0.06) 100%);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+}
+
+.doc-profile-status-banner.pending {
+  background: linear-gradient(135deg, rgba(245, 158, 11, 0.12) 0%, rgba(217, 119, 6, 0.06) 100%);
+  border: 1px solid rgba(245, 158, 11, 0.28);
+}
+
+.doc-profile-status-banner.rejected {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.12) 0%, rgba(185, 28, 28, 0.06) 100%);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+}
+
+.doc-profile-status-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.doc-profile-status-banner.approved .doc-profile-status-icon {
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+}
+
+.doc-profile-status-banner.pending .doc-profile-status-icon {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+}
+
+.doc-profile-status-banner.rejected .doc-profile-status-icon {
+  background: rgba(239, 68, 68, 0.2);
+  color: #f87171;
+}
+
+.doc-profile-status-content {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.doc-profile-status-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.doc-profile-status-desc {
+  font-size: 0.84rem;
+  color: #cbd5e1;
+  margin: 0;
+  line-height: 1.45;
+}
+
+/* --------------------------------------------------------------------------
+   Feedback Alert Banners (Action alert)
+   -------------------------------------------------------------------------- */
+.doc-profile-alert {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 18px;
+  border-radius: 10px;
+  font-size: 0.88rem;
+  line-height: 1.5;
+  animation: fadeInAlert 0.2s ease-in-out;
+}
+
+@keyframes fadeInAlert {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.doc-profile-alert.success {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+  color: #a7f3d0;
+}
+
+.doc-profile-alert.error {
+  background: rgba(239, 68, 68, 0.12);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
+}
+
+.doc-profile-alert-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.doc-profile-alert-close {
+  background: transparent;
+  border: none;
+  color: inherit;
+  opacity: 0.7;
+  cursor: pointer;
+  padding: 2px;
+  border-radius: 4px;
+  display: flex;
+  align-items: center;
+  transition: opacity 0.15s;
+}
+
+.doc-profile-alert-close:hover {
+  opacity: 1;
+}
+
+/* --------------------------------------------------------------------------
+   Doctor Summary Hero Card (View Mode)
+   -------------------------------------------------------------------------- */
+.doc-profile-hero-card {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 24px;
+  flex-wrap: wrap;
+  padding: 28px 32px;
+  background: linear-gradient(135deg, #0b1528 0%, #0d1e38 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
+}
+
+.doc-profile-identity {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+.doc-profile-avatar {
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #0ea5e9 0%, #14b8a6 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.75rem;
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(14, 165, 233, 0.3);
+  border: 2px solid rgba(255, 255, 255, 0.15);
+  flex-shrink: 0;
+}
+
+.doc-profile-name-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.doc-profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.doc-profile-name {
+  font-size: 1.6rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+.doc-profile-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-radius: 20px;
+}
+
+.doc-profile-badge.approved {
+  background: rgba(16, 185, 129, 0.15);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.doc-profile-badge.pending {
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.doc-profile-badge.rejected {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.doc-profile-specialization-text {
+  font-size: 0.95rem;
+  font-weight: 500;
+  color: #38bdf8;
+  margin: 0;
+}
+
+.doc-profile-qualification-text {
+  font-size: 0.84rem;
+  color: #94a3b8;
+  margin: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Grid Layout for Cards
+   -------------------------------------------------------------------------- */
+.doc-profile-grid {
+  display: grid;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 24px;
+}
+
+.doc-profile-col-8 {
+  grid-column: span 8;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.doc-profile-col-4 {
+  grid-column: span 4;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.doc-profile-card {
+  background: #0b1528;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 24px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.18);
+}
+
+.doc-profile-card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  padding-bottom: 14px;
+}
+
+.doc-profile-card-title-group {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.doc-profile-card-icon {
+  color: #0ea5e9;
+  display: flex;
+  align-items: center;
+}
+
+.doc-profile-card-title {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  letter-spacing: -0.01em;
+}
+
+/* --------------------------------------------------------------------------
+   Info List (Key - Value Pairs)
+   -------------------------------------------------------------------------- */
+.doc-profile-info-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px 24px;
+}
+
+.doc-profile-info-item {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.doc-profile-info-item.full-width {
+  grid-column: span 2;
+}
+
+.doc-profile-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.76rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #64748b;
+}
+
+.doc-profile-value {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #f1f5f9;
+  line-height: 1.4;
+  word-break: break-word;
+}
+
+.doc-profile-value.highlight {
+  color: #38bdf8;
+  font-size: 1.15rem;
+}
+
+.doc-profile-value.muted {
+  color: #64748b;
+  font-weight: 400;
+  font-style: italic;
+}
+
+.doc-profile-bio-text {
+  font-size: 0.92rem;
+  color: #cbd5e1;
+  line-height: 1.65;
+  white-space: pre-wrap;
+  margin: 0;
+  word-break: break-word;
+}
+
+.doc-profile-bio-empty {
+  font-size: 0.88rem;
+  color: #64748b;
+  font-style: italic;
+  padding: 16px 0;
+  margin: 0;
+}
+
+/* --------------------------------------------------------------------------
+   Compliance & Locked Items List
+   -------------------------------------------------------------------------- */
+.doc-compliance-notice {
+  background: rgba(14, 165, 233, 0.06);
+  border: 1px solid rgba(14, 165, 233, 0.16);
+  border-radius: 8px;
+  padding: 12px 14px;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  font-size: 0.78rem;
+  color: #94a3b8;
+  line-height: 1.45;
+}
+
+.doc-compliance-notice-icon {
+  color: #38bdf8;
+  margin-top: 1px;
+  flex-shrink: 0;
+}
+
+.doc-compliance-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.doc-compliance-item {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.doc-compliance-item:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.doc-compliance-label-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.doc-lock-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: #f59e0b;
+  background: rgba(245, 158, 11, 0.1);
+  padding: 2px 6px;
+  border-radius: 4px;
+}
+
+.doc-mono-val {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.84rem;
+  color: #e2e8f0;
+  word-break: break-all;
+}
+
+/* --------------------------------------------------------------------------
+   Edit Mode Form Styles
+   -------------------------------------------------------------------------- */
+.doc-edit-container {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.doc-edit-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 16px 24px;
+  background: rgba(14, 165, 233, 0.08);
+  border: 1px solid rgba(14, 165, 233, 0.25);
+  border-radius: 12px;
+}
+
+.doc-edit-bar-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #ffffff;
+}
+
+.doc-edit-bar-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.doc-form-card {
+  background: #0b1528;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.doc-form-section-title {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.doc-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px 24px;
+}
+
+.doc-form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.doc-form-field.full-width {
+  grid-column: span 2;
+}
+
+.doc-form-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #e2e8f0;
+}
+
+.doc-form-label .required {
+  color: #f87171;
+  margin-left: 3px;
+}
+
+.doc-form-input {
+  width: 100%;
+  padding: 10px 14px;
+  font-size: 0.92rem;
+  color: #ffffff;
+  background: #070d18;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  outline: none;
+  transition: all 0.15s ease-in-out;
+  box-sizing: border-box;
+}
+
+.doc-form-input:focus {
+  border-color: #0ea5e9;
+  box-shadow: 0 0 0 3px rgba(14, 165, 233, 0.2);
+}
+
+.doc-form-input.has-error {
+  border-color: #ef4444;
+  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.2);
+}
+
+.doc-form-input:disabled {
+  background: rgba(255, 255, 255, 0.03);
+  color: #64748b;
+  border-color: rgba(255, 255, 255, 0.06);
+  cursor: not-allowed;
+}
+
+.doc-form-textarea {
+  min-height: 120px;
+  resize: vertical;
+  line-height: 1.5;
+  font-family: inherit;
+}
+
+.doc-form-field-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.74rem;
+  color: #64748b;
+  min-height: 16px;
+}
+
+.doc-form-field-error {
+  color: #f87171;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.doc-char-count {
+  font-size: 0.72rem;
+  color: #64748b;
+  font-variant-numeric: tabular-nums;
+}
+
+.doc-char-count.limit-near {
+  color: #f59e0b;
+}
+
+.doc-char-count.limit-reached {
+  color: #ef4444;
+}
+
+.doc-locked-fields-panel {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.doc-locked-fields-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #94a3b8;
+}
+
+.doc-locked-fields-header svg {
+  color: #f59e0b;
+}
+
+.doc-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+/* --------------------------------------------------------------------------
+   Loading Skeleton
+   -------------------------------------------------------------------------- */
+.doc-skeleton {
+  background: linear-gradient(
+    90deg,
+    rgba(255, 255, 255, 0.04) 25%,
+    rgba(255, 255, 255, 0.08) 37%,
+    rgba(255, 255, 255, 0.04) 63%
+  );
+  background-size: 400% 100%;
+  animation: skeletonPulse 1.4s ease infinite;
+  border-radius: 6px;
+}
+
+@keyframes skeletonPulse {
+  0% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0 50%;
+  }
+}
+
+.doc-skeleton-hero {
+  height: 120px;
+  border-radius: 14px;
+}
+
+.doc-skeleton-card {
+  height: 280px;
+  border-radius: 14px;
+}
+
+/* --------------------------------------------------------------------------
+   Error & Retry State
+   -------------------------------------------------------------------------- */
+.doc-profile-error-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 60px 24px;
+  background: #0b1528;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  border-radius: 14px;
+  text-align: center;
+}
+
+.doc-profile-error-icon {
+  color: #f87171;
+}
+
+.doc-profile-error-title {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #ffffff;
+  margin: 0;
+}
+
+.doc-profile-error-msg {
+  font-size: 0.9rem;
+  color: #94a3b8;
+  max-width: 480px;
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Design
+   -------------------------------------------------------------------------- */
+@media (max-width: 1024px) {
+  .doc-profile-grid {
+    grid-template-columns: 1fr;
+  }
+  .doc-profile-col-8,
+  .doc-profile-col-4 {
+    grid-column: span 12;
+  }
+}
+
+@media (max-width: 768px) {
+  .doc-profile-header {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .doc-profile-hero-card {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  .doc-profile-info-grid,
+  .doc-form-grid {
+    grid-template-columns: 1fr;
+  }
+  .doc-profile-info-item.full-width,
+  .doc-form-field.full-width {
+    grid-column: span 1;
+  }
+  .doc-edit-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .doc-edit-bar-actions {
+    justify-content: flex-end;
+  }
+}
+
