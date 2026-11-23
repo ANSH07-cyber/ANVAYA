@@ -45,6 +45,7 @@ class AppointmentCreate(BaseModel):
 class AppointmentReschedule(BaseModel):
     appointment_date: date
     start_time: time
+    idempotency_key: str | None = None
 
     @field_validator("appointment_date")
     @classmethod
@@ -58,6 +59,26 @@ class AppointmentStatusUpdate(BaseModel):
     status: Literal["completed"]
 
 
+class DoctorAppointmentCancel(BaseModel):
+    model_config = ConfigDict(str_strip_whitespace=True)
+
+    cancellation_reason: str = Field(
+        ...,
+        min_length=5,
+        max_length=1000,
+        description="Mandatory clinical or administrative justification for appointment cancellation by doctor.",
+    )
+    idempotency_key: str | None = None
+
+    @field_validator("cancellation_reason")
+    @classmethod
+    def validate_cancellation_reason(cls, value: str) -> str:
+        cleaned = value.strip()
+        if len(cleaned) < 5:
+            raise ValueError("Cancellation reason must be at least 5 characters.")
+        return cleaned
+
+
 class AppointmentRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -69,6 +90,7 @@ class AppointmentRead(BaseModel):
     end_time: time
     status: Literal["booked", "cancelled", "completed"]
     reason: str | None
+    revision: int = 0
     created_at: datetime
     updated_at: datetime
 
@@ -82,6 +104,7 @@ class AppointmentListResponse(BaseModel):
 
 class DoctorAppointmentRead(AppointmentRead):
     patient_name: str
+    cancellation_reason: str | None = None
 
 
 class DoctorAppointmentListResponse(BaseModel):

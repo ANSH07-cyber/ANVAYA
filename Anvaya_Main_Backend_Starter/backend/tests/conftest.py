@@ -234,3 +234,20 @@ def past_booked_appointment(
     db_session.refresh(appointment)
 
     return appointment
+
+
+# =====================================================
+# RATE LIMIT TEST SAFETY
+# =====================================================
+
+@pytest.fixture(autouse=True)
+def manage_rate_limiting():
+    from app.core.config import settings
+    from app.core.rate_limit import reset_rate_limits
+    reset_rate_limits()
+    prev = settings.rate_limit_enabled
+    settings.rate_limit_enabled = False
+    yield
+    settings.rate_limit_enabled = prev
+    reset_rate_limits()
+

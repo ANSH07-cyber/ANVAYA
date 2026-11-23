@@ -22,8 +22,12 @@ target_metadata = Base.metadata
 def run_migrations_offline() -> None:
     """Generate migration SQL without opening a database connection."""
 
+    x_args = context.get_x_argument(as_dictionary=True)
+    url = x_args.get("db_url") or config.get_main_option("sqlalchemy.url")
+    if not url or url.startswith("driver:"):
+        url = settings.database_url
     context.configure(
-        url=settings.database_url,
+        url=url,
         target_metadata=target_metadata,
         literal_binds=True,
         dialect_opts={"paramstyle": "named"},
@@ -37,8 +41,12 @@ def run_migrations_offline() -> None:
 def run_migrations_online() -> None:
     """Connect to the configured database and run migrations."""
 
+    x_args = context.get_x_argument(as_dictionary=True)
+    url = x_args.get("db_url") or config.get_main_option("sqlalchemy.url")
+    if not url or url.startswith("driver:"):
+        url = settings.database_url
     connectable = create_engine(
-        settings.database_url,
+        url,
         poolclass=pool.NullPool,
         pool_pre_ping=True,
     )

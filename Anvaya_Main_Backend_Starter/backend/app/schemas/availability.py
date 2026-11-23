@@ -41,6 +41,17 @@ class DoctorAvailabilityCreate(BaseModel):
         return self
 
 
+class DoctorAvailabilityUpdate(DoctorAvailabilityCreate):
+    pass
+
+
+class DoctorAvailabilityStatusUpdate(BaseModel):
+    is_active: bool = Field(
+        ...,
+        description="Active status of the recurring availability schedule.",
+    )
+
+
 class DoctorAvailabilityRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

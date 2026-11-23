@@ -11,6 +11,7 @@ from sqlalchemy import (
     String,
     Text,
     Time,
+    Integer,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Uuid
@@ -79,6 +80,17 @@ class Appointment(Base):
         String(20),
         default="booked",
         nullable=False,
+    )
+
+    revision: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        nullable=False,
+    )
+
+    last_idempotency_key: Mapped[str | None] = mapped_column(
+        String(255),
+        nullable=True,
     )
 
     reason: Mapped[str | None] = mapped_column(

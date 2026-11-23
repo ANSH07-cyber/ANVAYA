@@ -12,6 +12,8 @@ from app.api.routes import (
     health_records,
     patients,
     prescriptions,
+    skin_lesion,
+    notifications,
 )
 
 
@@ -86,3 +88,19 @@ api_router.include_router(consents.router)
 # =========================================================
 
 api_router.include_router(prescriptions.router)
+
+
+# =========================================================
+# 11. AI SKIN LESION INFERENCE & CLINICAL REVIEW
+# =========================================================
+
+api_router.include_router(skin_lesion.router)
+
+
+# =========================================================
+# 12. IN-APP NOTIFICATIONS
+# =========================================================
+
+api_router.include_router(notifications.router)
+
+

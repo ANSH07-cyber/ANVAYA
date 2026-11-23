@@ -26,3 +26,6 @@ class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
     user: UserPublic
+
+class FirebaseLoginRequest(BaseModel):
+    id_token: str = Field(min_length=1, max_length=16384)

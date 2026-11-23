@@ -1,5 +1,5 @@
 
-from datetime import datetime
+from datetime import date, datetime
 from uuid import UUID
 
 from pydantic import (
@@ -164,3 +164,21 @@ class PrescriptionListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+# =====================================================
+# 6. DOCTOR PRESCRIPTION RESPONSE & LIST RESPONSE
+# =====================================================
+
+class DoctorPrescriptionRead(PrescriptionRead):
+    patient_name: str
+    appointment_date: date
+
+
+class DoctorPrescriptionListResponse(BaseModel):
+    items: list[DoctorPrescriptionRead]
+
+    total: int
+    limit: int
+    offset: int
+

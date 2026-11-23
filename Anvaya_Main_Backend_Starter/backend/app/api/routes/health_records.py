@@ -283,7 +283,7 @@ def get_patient_health_records_for_doctor(
     # Row locking prevents a concurrent revocation from
     # changing consent while the protected access is checked.
 
-    consent = db.scalar(
+    active_consents = db.scalars(
         select(ConsentRecord)
         .where(
             ConsentRecord.patient_profile_id == patient_profile.id,
@@ -291,9 +291,9 @@ def get_patient_health_records_for_doctor(
             ConsentRecord.is_active.is_(True),
         )
         .with_for_update()
-    )
+    ).all()
 
-    if consent is None:
+    if not active_consents:
 
         _log_doctor_ehr_access(
             db,
@@ -314,9 +314,9 @@ def get_patient_health_records_for_doctor(
         )
 
     # STEP 6: Verify that consent covers every
-    # requested health-information field.
+    # requested health-information field (union of all active consent scopes).
 
-    permitted_scopes = set(consent.data_scopes)
+    permitted_scopes = set().union(*(set(c.data_scopes) for c in active_consents))
     requested_scopes = set(scopes)
 
     if not requested_scopes.issubset(permitted_scopes):
