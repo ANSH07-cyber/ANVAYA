@@ -1,12 +1,17 @@
 
-from typing import Literal
+from collections.abc import Sequence
+import re
+from typing import Any, Literal
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_roles
+from app.api.deps import get_clinical_key_registry, require_roles
+from app.core.config import settings
+from app.core.crypto import KeyRegistry
+from app.services.clinical_crypto_service import CLINICAL_FIELDS, decrypt_authorized_fields
 from app.db.session import get_db
 
 from app.models.consent_record import ConsentRecord
@@ -18,6 +23,7 @@ from app.models.user import User
 from app.schemas.consent import HealthDataScope
 
 from app.schemas.health_record import (
+    HealthRecordRead,
     HealthRecordListResponse,
     DoctorSharedHealthRecordRead,
     DoctorSharedHealthRecordListResponse,
@@ -95,6 +101,42 @@ def _log_doctor_ehr_access(
 
 
 # =========================================================
+# DISABLED-MODE CIPHERTEXT GUARD
+# =========================================================
+
+# Defensive prefix match for versioned or unversioned encrypted envelopes (e.g.
+# "enc:v1:...", "enc:v2:..."). Does not match ordinary words like "encephalopathy".
+_DISABLED_ENVELOPE_PREFIX_PATTERN: re.Pattern[str] = re.compile(
+    r"^enc:",
+    re.IGNORECASE,
+)
+
+
+def _guard_disabled_mode_records(records: Sequence[Any]) -> None:
+    """Fail closed in disabled mode if any clinical field holds an encrypted envelope.
+
+    Inspects all seven canonical ``CLINICAL_FIELDS`` across the entire page of
+    records before any response object is serialized or returned, preventing
+    raw ciphertext leakage from mixed workers or partial-page leaks. Never
+    invokes crypto helpers, never reads ``encryption_version``, and never
+    embeds record values or keys in the raised HTTP error.
+    """
+    for record in records:
+        for field_name in CLINICAL_FIELDS:
+            value = getattr(record, field_name, None)
+            if isinstance(value, str) and _DISABLED_ENVELOPE_PREFIX_PATTERN.match(
+                value.strip()
+            ):
+                raise HTTPException(
+                    status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                    detail=(
+                        "Clinical encryption is currently disabled and cannot "
+                        "serve encrypted clinical records."
+                    ),
+                )
+
+
+# =========================================================
 # 1. GET MY HEALTH RECORDS - PATIENT
 # =========================================================
 
@@ -107,6 +149,7 @@ def get_my_health_records(
     offset: int = Query(default=0, ge=0),
     current_user: User = Depends(require_roles("patient")),
     db: Session = Depends(get_db),
+    key_registry: KeyRegistry | None = Depends(get_clinical_key_registry),
 ) -> HealthRecordListResponse:
 
     patient_profile = db.scalar(
@@ -140,6 +183,80 @@ def get_my_health_records(
         .offset(offset)
     ).all()
 
+    try:
+        mode = settings.effective_encryption_mode
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Clinical encryption service is currently unavailable.",
+        )
+
+    if mode != "disabled":
+        if not hasattr(HealthRecord, "encryption_version"):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Clinical encryption schema is not ready.",
+            )
+
+        if key_registry is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Clinical encryption service is currently unavailable.",
+            )
+
+        decrypted_items = []
+        for record in records:
+            version = getattr(record, "encryption_version", 0)
+            if version == 1:
+                enc_dict = {f: getattr(record, f) for f in CLINICAL_FIELDS}
+                dec_data = decrypt_authorized_fields(
+                    record_id=record.id,
+                    encrypted_fields=enc_dict,
+                    authorized_scopes=list(CLINICAL_FIELDS),
+                    registry=key_registry,
+                )
+                decrypted_items.append(
+                    HealthRecordRead(
+                        id=record.id,
+                        patient_profile_id=record.patient_profile_id,
+                        doctor_profile_id=record.doctor_profile_id,
+                        appointment_id=record.appointment_id,
+                        visit_date=record.visit_date,
+                        created_at=record.created_at,
+                        updated_at=record.updated_at,
+                        **dec_data,
+                    )
+                )
+            elif version == 0:
+                if mode == "strict":
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Unencrypted clinical record encountered in strict encryption mode.",
+                    )
+                # Guard against corrupted version 0 rows containing ciphertext envelopes
+                for f in CLINICAL_FIELDS:
+                    val = getattr(record, f)
+                    if isinstance(val, str) and val.strip().startswith("enc:v1:"):
+                        raise HTTPException(
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="Data integrity violation: ciphertext envelope detected in unencrypted record.",
+                        )
+                decrypted_items.append(HealthRecordRead.model_validate(record))
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Unsupported encryption version: {version}",
+                )
+
+        return HealthRecordListResponse(
+            items=decrypted_items,
+            total=total,
+            limit=limit,
+            offset=offset,
+        )
+
+    _guard_disabled_mode_records(records)
+
     return HealthRecordListResponse(
         items=records,
         total=total,
@@ -172,6 +289,7 @@ def get_patient_health_records_for_doctor(
 
     current_user: User = Depends(require_roles("doctor")),
     db: Session = Depends(get_db),
+    key_registry: KeyRegistry | None = Depends(get_clinical_key_registry),
 ) -> DoctorSharedHealthRecordListResponse:
 
     # STEP 1: Find the authenticated doctor's profile.
@@ -365,20 +483,84 @@ def get_patient_health_records_for_doctor(
 
     items = []
 
-    for record in records:
-
-        authorized_data = {
-            scope: getattr(record, scope)
-            for scope in scopes
-        }
-
-        items.append(
-            DoctorSharedHealthRecordRead(
-                record_id=record.id,
-                visit_date=record.visit_date,
-                data=authorized_data,
-            )
+    try:
+        mode = settings.effective_encryption_mode
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Clinical encryption service is currently unavailable.",
         )
+
+    if mode != "disabled":
+        if not hasattr(HealthRecord, "encryption_version"):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Clinical encryption schema is not ready.",
+            )
+
+        if key_registry is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Clinical encryption service is currently unavailable.",
+            )
+
+        for record in records:
+            version = getattr(record, "encryption_version", 0)
+            if version == 1:
+                enc_dict = {f: getattr(record, f) for f in CLINICAL_FIELDS}
+                authorized_data = decrypt_authorized_fields(
+                    record_id=record.id,
+                    encrypted_fields=enc_dict,
+                    authorized_scopes=scopes,
+                    registry=key_registry,
+                )
+            elif version == 0:
+                if mode == "strict":
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail="Unencrypted clinical record encountered in strict encryption mode.",
+                    )
+                # Guard against corrupted version 0 rows containing ciphertext envelopes
+                for scope in scopes:
+                    val = getattr(record, scope)
+                    if isinstance(val, str) and val.strip().startswith("enc:v1:"):
+                        raise HTTPException(
+                            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                            detail="Data integrity violation: ciphertext envelope detected in unencrypted record.",
+                        )
+                authorized_data = {
+                    scope: getattr(record, scope)
+                    for scope in scopes
+                }
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Unsupported encryption version: {version}",
+                )
+
+            items.append(
+                DoctorSharedHealthRecordRead(
+                    record_id=record.id,
+                    visit_date=record.visit_date,
+                    data=authorized_data,
+                )
+            )
+    else:
+        _guard_disabled_mode_records(records)
+
+        for record in records:
+            authorized_data = {
+                scope: getattr(record, scope)
+                for scope in scopes
+            }
+
+            items.append(
+                DoctorSharedHealthRecordRead(
+                    record_id=record.id,
+                    visit_date=record.visit_date,
+                    data=authorized_data,
+                )
+            )
 
     # STEP 9: Record successful EHR access.
     # No diagnosis, symptoms or clinical notes are logged.

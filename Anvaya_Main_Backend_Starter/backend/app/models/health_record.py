@@ -112,3 +112,9 @@ class HealthRecord(Base):
         onupdate=lambda: datetime.now(timezone.utc),
         nullable=False,
     )
+
+    # Phase 3 Gate 2B Architectural Safety Notice:
+    # Adding `encryption_version: Mapped[int]` as a mapped column before applying
+    # its Alembic migration breaks SELECT queries against unmigrated live databases.
+    # Therefore, mapped column definition is deferred to Phase 3C-2 (migration phase).
+

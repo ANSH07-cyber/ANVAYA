@@ -1,4 +1,5 @@
 from datetime import datetime, timedelta, timezone
+import uuid
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
@@ -7,7 +8,15 @@ from sqlalchemy import func, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_current_user, require_roles, verify_csrf_and_origin
+from app.api.deps import (
+    get_clinical_key_registry,
+    get_current_user,
+    require_roles,
+    verify_csrf_and_origin,
+)
+from app.core.config import settings
+from app.core.crypto import KeyRegistry
+from app.services.clinical_crypto_service import CLINICAL_FIELDS, encrypt_record_field
 from app.db.session import get_db
 
 from app.models.appointment import Appointment
@@ -1732,6 +1741,7 @@ def update_appointment_status(
     payload: ConsultationCompletion,
     current_user: User = Depends(require_roles("doctor")),
     db: Session = Depends(get_db),
+    key_registry: KeyRegistry | None = Depends(get_clinical_key_registry),
 ) -> HealthRecordRead:
 
     # STEP 1: Find and lock the authenticated doctor's own profile.
@@ -1797,13 +1807,73 @@ def update_appointment_status(
 
     # STEP 5: Build the consultation-linked health record.
 
-    health_record = HealthRecord(
-        patient_profile_id=appointment.patient_profile_id,
-        doctor_profile_id=doctor_profile.id,
-        appointment_id=appointment.id,
-        visit_date=appointment.appointment_date,
-        **payload.model_dump(),
-    )
+    try:
+        mode = settings.effective_encryption_mode
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Clinical encryption service is currently unavailable.",
+        )
+
+    if mode in ("read_write", "strict"):
+        if not hasattr(HealthRecord, "encryption_version"):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Clinical encryption schema is not ready.",
+            )
+
+        if key_registry is None:
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Clinical encryption service is currently unavailable.",
+            )
+
+        # Pre-allocate immutable record UUID for deterministic AAD binding
+        preallocated_record_id = uuid.uuid4()
+        encrypted_fields = {}
+        for field in sorted(CLINICAL_FIELDS):
+            raw_val = getattr(payload, field)
+            encrypted_fields[field] = encrypt_record_field(
+                record_id=preallocated_record_id,
+                field_name=field,
+                plaintext=raw_val,
+                registry=key_registry,
+            )
+
+        health_record = HealthRecord(
+            id=preallocated_record_id,
+            patient_profile_id=appointment.patient_profile_id,
+            doctor_profile_id=doctor_profile.id,
+            appointment_id=appointment.id,
+            visit_date=appointment.appointment_date,
+            encryption_version=1,
+            **encrypted_fields,
+        )
+    elif mode == "mixed_read":
+        # Schema gating: mixed_read write requires schema readiness
+        if not hasattr(HealthRecord, "encryption_version"):
+            raise HTTPException(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                detail="Clinical encryption schema is not ready.",
+            )
+
+        health_record = HealthRecord(
+            patient_profile_id=appointment.patient_profile_id,
+            doctor_profile_id=doctor_profile.id,
+            appointment_id=appointment.id,
+            visit_date=appointment.appointment_date,
+            encryption_version=0,
+            **payload.model_dump(),
+        )
+    else:
+        # Default-OFF path: 100% original plaintext behavior
+        health_record = HealthRecord(
+            patient_profile_id=appointment.patient_profile_id,
+            doctor_profile_id=doctor_profile.id,
+            appointment_id=appointment.id,
+            visit_date=appointment.appointment_date,
+            **payload.model_dump(),
+        )
 
     # STEP 6: Save the health record and mark the appointment completed
     # in one transaction. Either both changes persist or neither does.
@@ -1823,6 +1893,25 @@ def update_appointment_status(
                 "Consultation could not be saved or the appointment "
                 "could not be completed."
             ),
+        )
+
+    if mode != "disabled":
+        # Map response so completing doctor receives clean plaintext, never ciphertext
+        return HealthRecordRead(
+            id=health_record.id,
+            patient_profile_id=health_record.patient_profile_id,
+            doctor_profile_id=health_record.doctor_profile_id,
+            appointment_id=health_record.appointment_id,
+            visit_date=health_record.visit_date,
+            chief_complaint=payload.chief_complaint,
+            visit_summary=payload.visit_summary,
+            symptoms=payload.symptoms,
+            diagnosis=payload.diagnosis,
+            clinical_notes=payload.clinical_notes,
+            treatment_plan=payload.treatment_plan,
+            follow_up_instructions=payload.follow_up_instructions,
+            created_at=health_record.created_at,
+            updated_at=health_record.updated_at,
         )
 
     return health_record

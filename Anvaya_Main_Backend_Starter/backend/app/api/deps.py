@@ -162,3 +162,43 @@ def verify_csrf_and_origin(request: Request) -> None:
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid or expired CSRF token signature.",
         )
+
+
+def get_clinical_key_registry(request: Request):
+    """Provides the application-scoped KeyRegistry for clinical storage encryption.
+
+    When mode == "disabled" and clinical_encryption_enabled is False:
+        Returns None (default disabled mode; zero crypto overhead).
+
+    When mode in ("mixed_read", "read_write", "strict"):
+        Returns the KeyRegistry stored on app.state.
+        If missing or not initialized, fails closed with HTTP 503 Service Unavailable.
+
+    If legacy clinical_encryption_enabled is True:
+        Fails closed with HTTP 503 Service Unavailable.
+    """
+    if getattr(settings, "clinical_encryption_enabled", False):
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Clinical encryption service is currently unavailable.",
+        )
+
+    try:
+        mode = settings.effective_encryption_mode
+    except ValueError:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Clinical encryption service is currently unavailable.",
+        )
+
+    if mode == "disabled":
+        return None
+
+    registry = getattr(request.app.state, "clinical_key_registry", None)
+    if registry is None:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Clinical encryption service is currently unavailable.",
+        )
+    return registry
+

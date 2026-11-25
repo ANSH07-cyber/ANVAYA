@@ -1,5 +1,16 @@
 from functools import lru_cache
+from typing import Literal
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from typing_extensions import Self
+
+
+ClinicalEncryptionMode = Literal[
+    "disabled",
+    "mixed_read",
+    "read_write",
+    "strict",
+]
 
 
 class Settings(BaseSettings):
@@ -36,7 +47,30 @@ class Settings(BaseSettings):
     rate_limit_login: str = "10/minute"
     rate_limit_ai_inference: str = "20/minute"
 
+    # Clinical Data Encryption (Gate 2B Phase 3) - Default Disabled
+    clinical_encryption_enabled: bool = False
+    clinical_encryption_mode: ClinicalEncryptionMode = "disabled"
+    clinical_encryption_active_key_id: str | None = None
+    clinical_encryption_keys_json: str | None = None
+
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+
+    @model_validator(mode="after")
+    def validate_clinical_encryption_mode(self) -> Self:
+        if self.clinical_encryption_enabled:
+            raise ValueError(
+                "Invalid configuration: legacy clinical_encryption_enabled=True is rejected. "
+                "Explicit clinical_encryption_mode must be configured with clinical_encryption_enabled=False."
+            )
+        return self
+
+    @property
+    def effective_encryption_mode(self) -> ClinicalEncryptionMode:
+        if self.clinical_encryption_enabled:
+            raise ValueError(
+                "Invalid configuration: legacy clinical_encryption_enabled=True is forbidden."
+            )
+        return self.clinical_encryption_mode
 
     @property
     def cors_origin_list(self) -> list[str]:
