@@ -1,14 +1,18 @@
 
 import uuid
 from datetime import date, datetime, timezone
+from typing import Any
 
 from sqlalchemy import (
+    CheckConstraint,
     Date,
     DateTime,
     ForeignKey,
     Index,
+    Integer,
     Text,
     UniqueConstraint,
+    text,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.types import Uuid
@@ -20,6 +24,10 @@ class HealthRecord(Base):
     __tablename__ = "health_records"
 
     __table_args__ = (
+        CheckConstraint(
+            "encryption_version IN (0, 1)",
+            name="ck_health_records_encryption_version",
+        ),
         UniqueConstraint(
             "appointment_id",
             name="uq_health_records_appointment",
@@ -113,8 +121,15 @@ class HealthRecord(Base):
         nullable=False,
     )
 
-    # Phase 3 Gate 2B Architectural Safety Notice:
-    # Adding `encryption_version: Mapped[int]` as a mapped column before applying
-    # its Alembic migration breaks SELECT queries against unmigrated live databases.
-    # Therefore, mapped column definition is deferred to Phase 3C-2 (migration phase).
+    encryption_version: Mapped[int] = mapped_column(
+        Integer,
+        default=0,
+        server_default=text("0"),
+        nullable=False,
+    )
+
+    def __init__(self, **kwargs: Any) -> None:
+        """Default omitted encryption_version to plaintext v0 on instantiation."""
+        kwargs.setdefault("encryption_version", 0)
+        super().__init__(**kwargs)
 

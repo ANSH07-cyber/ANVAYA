@@ -212,12 +212,10 @@ def test_c03_encryption_version_metadata_gap_and_simulation(
        - version 1: AES-GCM envelope
        - version > 1 / invalid: fail closed
     """
-    # Programmatic assertion of existing implementation gap:
-    # HealthRecord on disk does NOT yet have encryption_version.
+    # Programmatic assertion of Phase 3C-2L ORM column mapping:
     actual_columns = set(HealthRecord.__table__.columns.keys())
-    assert "encryption_version" not in actual_columns, (
-        "GAP VERIFIED: HealthRecord.encryption_version is not yet implemented on the model."
-    )
+    assert "encryption_version" in actual_columns
+    assert HealthRecord.__table__.columns["encryption_version"].nullable is False
 
     # In-memory simulation of the proposed tri-state reader logic
     def simulated_record_reader(

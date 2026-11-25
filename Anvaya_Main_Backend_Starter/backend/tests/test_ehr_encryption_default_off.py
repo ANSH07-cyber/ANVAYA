@@ -79,21 +79,20 @@ def test_04_dependency_fails_closed_when_enabled_and_missing() -> None:
 
 def test_05_health_record_model_unmigrated_compatibility() -> None:
     """
-    Test 5: Confirms HealthRecord does NOT declare encryption_version as a mapped column.
-    This guarantees that SELECT queries against unmigrated live databases will not fail.
+    Test 5: Confirms HealthRecord maps encryption_version (Phase 3C-2L) with
+    default 0 alongside the 14 baseline columns without breaking plaintext defaults.
     """
     column_names = set(HealthRecord.__table__.columns.keys())
-    assert "encryption_version" not in column_names, (
-        "CRITICAL SAFETY CHECK: encryption_version mapped column must be deferred to Phase 3C-2."
-    )
-    # Confirm exact 13 baseline columns exist
-    expected_baseline_columns = {
+    assert "encryption_version" in column_names
+    enc_col = HealthRecord.__table__.columns["encryption_version"]
+    assert enc_col.nullable is False
+    expected_columns = {
         "id", "patient_profile_id", "doctor_profile_id", "appointment_id",
         "visit_date", "chief_complaint", "visit_summary", "symptoms",
         "diagnosis", "clinical_notes", "treatment_plan", "follow_up_instructions",
-        "created_at", "updated_at",
+        "created_at", "updated_at", "encryption_version",
     }
-    assert column_names == expected_baseline_columns
+    assert column_names == expected_columns
 
 
 def test_06_health_record_constructor_plaintext_compatibility() -> None:
@@ -230,9 +229,8 @@ def test_11_clinical_fields_canonical_contract_intact() -> None:
 
 def test_12_schema_readiness_guard_fails_closed() -> None:
     """
-    Test 12: If clinical_encryption_enabled is True against unmigrated model,
-    the schema readiness check strictly fails closed with HTTP 503.
+    Test 12: Confirms HealthRecord maps encryption_version cleanly in Phase 3C-2L
+    and legacy clinical_encryption_enabled=True remains rejected.
     """
-    assert not hasattr(HealthRecord, "encryption_version")
-    # This proves the guard in update_appointment_status will trigger:
-    # if not hasattr(HealthRecord, "encryption_version"): raise HTTPException(503, ...)
+    assert hasattr(HealthRecord, "encryption_version")
+    assert settings.effective_encryption_mode == "disabled"

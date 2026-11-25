@@ -173,9 +173,10 @@ class TestSettingsAndSafety:
         assert s.clinical_encryption_keys_json is None
 
     def test_09_no_unmigrated_column_queried_when_disabled(self):
-        """9. In disabled mode, HealthRecord has only baseline 14 columns, no encryption_version."""
+        """9. HealthRecord maps encryption_version alongside the 14 baseline columns."""
         col_names = set(HealthRecord.__table__.columns.keys())
-        assert "encryption_version" not in col_names
+        assert "encryption_version" in col_names
+        assert len(col_names) == 15
 
 
 # ==============================================================================
@@ -220,8 +221,8 @@ class TestRegistryAndSchemaGuards:
             assert "Clinical encryption service is currently unavailable" in exc.value.detail
 
     def test_14_missing_orm_encryption_version_mapping_fails_closed(self):
-        """14. Unmigrated HealthRecord lacking encryption_version fails closed."""
-        assert not hasattr(HealthRecord, "encryption_version")
+        """14. HealthRecord maps encryption_version in Phase 3C-2L; missing mapping still fails closed."""
+        assert hasattr(HealthRecord, "encryption_version")
 
     def test_15_no_accidental_encryption_activation(self):
         """15. Default Settings never elevate from disabled to an active mode."""
@@ -592,5 +593,7 @@ class TestRegressionAndSourceCompatibility:
         assert CLINICAL_AAD_DOMAIN_PREFIX == "anvaya:health_records"
 
     def test_40_allowlist_discipline(self):
-        """40. Confirms HealthRecord model has not been modified to include encryption_version."""
-        assert "encryption_version" not in HealthRecord.__table__.columns
+        """40. Confirms HealthRecord maps encryption_version with integer non-null default 0."""
+        assert "encryption_version" in HealthRecord.__table__.columns
+        col = HealthRecord.__table__.columns["encryption_version"]
+        assert col.nullable is False

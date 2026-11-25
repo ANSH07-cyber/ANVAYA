@@ -616,8 +616,8 @@ def test_08_no_key_registry_no_crypto_helpers_and_no_encryption_version_referenc
         is_active=True,
     )
 
-    # Confirm ORM remains unmigrated and helper AST never references encryption_version
-    assert "encryption_version" not in HealthRecord.__table__.columns
+    # Confirm ORM maps encryption_version (Phase 3C-2L) while helper AST never references it
+    assert "encryption_version" in HealthRecord.__table__.columns
     guard_src = textwrap.dedent(inspect.getsource(_guard_disabled_mode_records))
     guard_ast = ast.parse(guard_src)
     guard_fn = guard_ast.body[0]
