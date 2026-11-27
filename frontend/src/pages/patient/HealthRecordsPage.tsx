@@ -1,5 +1,4 @@
-
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   Activity,
@@ -18,6 +17,8 @@ import PortalLayout from "../../layouts/PortalLayout";
 import { patientNavigation } from "./patientNavigation";
 import { patientService } from "../../services/patientService";
 import type { PatientHealthRecord } from "../../types/patient";
+import PatientHistoryControls from "./PatientHistoryControls";
+import { usePatientHistoryPage } from "./usePatientHistoryPage";
 import "./HealthRecordsPage.css";
 
 type RecordFilter = "all" | "recent";
@@ -43,53 +44,10 @@ export default function HealthRecordsPage() {
   const { user } = useAuth();
   const displayName = user?.full_name?.trim() || "Patient";
 
-  const [records, setRecords] = useState<PatientHealthRecord[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const history = usePatientHistoryPage(user?.id, patientService.getMyHealthRecords, "your health records");
+  const { items: records, loading, error } = history;
   const [filter, setFilter] = useState<RecordFilter>("all");
   const [search, setSearch] = useState("");
-
-  async function loadRecords() {
-    setLoading(true);
-    setError("");
-
-    try {
-      const response = await patientService.getMyHealthRecords();
-      setRecords(response.items);
-    } catch {
-      setError(
-        "We couldn't load your health records. Please try again.",
-      );
-    } finally {
-      setLoading(false);
-    }
-  }
-
-  useEffect(() => {
-    let active = true;
-
-    async function fetchRecords() {
-      try {
-        const response = await patientService.getMyHealthRecords();
-
-        if (active) setRecords(response.items);
-      } catch {
-        if (active) {
-          setError(
-            "We couldn't load your health records. Please try again.",
-          );
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-
-    void fetchRecords();
-
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const counts = useMemo(() => ({
     total: records.length,
@@ -259,6 +217,9 @@ export default function HealthRecordsPage() {
             </label>
           </div>
 
+          <PatientHistoryControls page={history.page} offset={history.offset}
+            loadedCount={records.length} setOffset={history.setOffset} />
+
           {loading ? (
             <div className="health-records-state">
               <div className="health-records-spinner" />
@@ -277,7 +238,7 @@ export default function HealthRecordsPage() {
               <button
                 type="button"
                 className="health-records-retry-button"
-                onClick={() => void loadRecords()}
+                onClick={history.reload}
               >
                 Try again
               </button>
@@ -289,10 +250,10 @@ export default function HealthRecordsPage() {
               </span>
               <h3>
                 {search
-                  ? "No matching records"
+                  ? "No matching records on this page"
                   : filter === "recent"
-                    ? "No records in the last 30 days"
-                    : "No health records yet"}
+                    ? "No records from the last 30 days on this page"
+                    : history.offset > 0 ? "No entries on this page" : "No health records yet"}
               </h3>
               <p>
                 {search

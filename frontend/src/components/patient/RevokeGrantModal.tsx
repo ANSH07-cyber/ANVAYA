@@ -23,6 +23,7 @@ import type {
   HealthDataScope,
   PatientConsent,
 } from "../../types/consent";
+import { formatDoctorDisplayName } from "../../utils/formatters";
 import "./RevokeGrantModal.css";
 
 export interface RevokeGrantModalProps {
@@ -173,7 +174,7 @@ export default function RevokeGrantModal({
 
     try {
       const revoked = await consentService.revokeConsent(consent.id);
-      const doctorName = doctor?.full_name ? `Dr. ${doctor.full_name}` : "the doctor";
+      const doctorName = formatDoctorDisplayName(doctor?.full_name, "the doctor");
       const successMessage = overlappingActiveGrantsCount > 0
         ? `Individual consent grant revoked. Notice: ${doctorName} still has ${overlappingActiveGrantsCount} other active grant(s) authorizing overlapping records.`
         : `Access for ${doctorName} through this consent grant has been successfully revoked.`;
@@ -194,9 +195,10 @@ export default function RevokeGrantModal({
 
   if (!isOpen || !consent) return null;
 
-  const doctorDisplayName = doctor?.full_name
-    ? `Dr. ${doctor.full_name}`
-    : "Doctor (details unavailable)";
+  const doctorDisplayName = formatDoctorDisplayName(
+    doctor?.full_name,
+    "Doctor (details unavailable)",
+  );
   const doctorSpecialty =
     doctor?.specialization || "Healthcare Provider";
   const clinicName = doctor?.clinic_name || "ANVAYA Partner Clinic";

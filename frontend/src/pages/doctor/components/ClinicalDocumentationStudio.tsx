@@ -181,7 +181,7 @@ export default function ClinicalDocumentationStudio({
                 Consultation Was Cancelled
               </strong>
               <p style={{ margin: 0, fontSize: "0.82rem", lineHeight: 1.5, color: "#e2e8f0" }}>
-                This appointment was cancelled by the patient. Clinical examination and consultation completion cannot be performed on cancelled bookings.
+                This appointment was cancelled. Clinical examination and consultation completion cannot be performed on cancelled bookings.
               </p>
             </div>
           </div>

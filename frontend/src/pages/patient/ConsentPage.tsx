@@ -25,6 +25,7 @@ import { fetchCompleteConsentHistory } from "../../services/consentPagination";
 import PatientPendingRequestsSection from "../../components/patient/PatientPendingRequestsSection";
 import RevokeGrantModal from "../../components/patient/RevokeGrantModal";
 import RevokeAllDoctorConsentModal from "../../components/patient/RevokeAllDoctorConsentModal";
+import { formatDoctorDisplayName } from "../../utils/formatters";
 
 import type {
   ConsentDoctor,
@@ -527,7 +528,7 @@ export default function ConsentPage() {
 
                 {doctors.map((doctor) => (
                   <option key={doctor.id} value={doctor.id}>
-                    Dr. {doctor.full_name} — {doctor.specialization}
+                    {formatDoctorDisplayName(doctor.full_name)} — {doctor.specialization}
                   </option>
                 ))}
               </select>
@@ -556,7 +557,7 @@ export default function ConsentPage() {
 
                 <div>
                   <strong>
-                    Dr. {doctorMap.get(selectedDoctor)?.full_name}
+                    {formatDoctorDisplayName(doctorMap.get(selectedDoctor)?.full_name)}
                   </strong>
                   <span>
                     {doctorMap.get(selectedDoctor)?.qualification} ·{" "}
@@ -752,9 +753,10 @@ export default function ConsentPage() {
                 {historyViewMode === "grouped" ? (
                   <div className="consent-doctor-groups-list">
                     {doctorGroups.map((group) => {
-                      const doctorDisplayName = group.doctor
-                        ? `Dr. ${group.doctor.full_name}`
-                        : "Doctor information unavailable";
+                      const doctorDisplayName = formatDoctorDisplayName(
+                        group.doctor?.full_name,
+                        "Doctor information unavailable",
+                      );
                       const doctorSpecialty =
                         group.doctor?.specialization || "Clinical Provider";
                       const clinicName =
@@ -959,9 +961,10 @@ export default function ConsentPage() {
 
                               <div>
                                 <strong>
-                                  {doctor
-                                    ? `Dr. ${doctor.full_name}`
-                                    : "Doctor information unavailable"}
+                                  {formatDoctorDisplayName(
+                                    doctor?.full_name,
+                                    "Doctor information unavailable",
+                                  )}
                                 </strong>
                                 <span>
                                   {doctor?.specialization ||
@@ -1041,7 +1044,7 @@ export default function ConsentPage() {
                                     onClick={() => handleOpenRevokeAll(consent.doctor_profile_id)}
                                   >
                                     <ShieldAlert size={14} />
-                                    Revoke All for Dr. {doctor?.full_name || ""}
+                                    Revoke All for {formatDoctorDisplayName(doctor?.full_name, "Doctor")}
                                   </button>
                                 )}
 

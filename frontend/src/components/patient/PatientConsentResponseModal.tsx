@@ -28,6 +28,7 @@ import type {
   ConsentRequestRespond,
   HealthDataScope,
 } from "../../types/consent";
+import { formatDoctorDisplayName } from "../../utils/formatters";
 import "./PatientConsentResponseModal.css";
 
 export interface PatientConsentResponseModalProps {
@@ -326,9 +327,10 @@ export default function PatientConsentResponseModal({
         idempotencyKeyRef.current,
       );
 
-      const doctorName = request.doctor_name
-        ? `Dr. ${request.doctor_name}`
-        : "the requesting doctor";
+      const doctorName = formatDoctorDisplayName(
+        request.doctor_name,
+        "the requesting doctor",
+      );
       const successMsg = isFullApproval
         ? `Consent request from ${doctorName} was fully approved. Authorized all ${selectedScopes.length} requested scopes.`
         : `Consent request from ${doctorName} was partially approved. Authorized ${selectedScopes.length} of ${requestedScopes.length} requested scopes.`;
@@ -368,9 +370,10 @@ export default function PatientConsentResponseModal({
         idempotencyKeyRef.current,
       );
 
-      const doctorName = request.doctor_name
-        ? `Dr. ${request.doctor_name}`
-        : "the doctor";
+      const doctorName = formatDoctorDisplayName(
+        request.doctor_name,
+        "the doctor",
+      );
       const successMsg = `Consent request from ${doctorName} has been declined. No additional health records were shared through this request. Any pre-existing active permissions remain active and unaffected.`;
 
       onResolved(result, successMsg);
@@ -389,9 +392,10 @@ export default function PatientConsentResponseModal({
 
   if (!isOpen || !request) return null;
 
-  const doctorDisplayName = request.doctor_name
-    ? `Dr. ${request.doctor_name}`
-    : "Healthcare Provider";
+  const doctorDisplayName = formatDoctorDisplayName(
+    request.doctor_name,
+    "Healthcare Provider",
+  );
   const doctorSpecialty =
     request.doctor_specialization || "Clinical Specialist";
   const clinicName = request.clinic_name || "ANVAYA Partner Clinic";

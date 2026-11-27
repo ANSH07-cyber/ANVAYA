@@ -24,6 +24,8 @@ import type {
   DoctorAvailabilityItem,
   DoctorAvailabilityUpdatePayload,
 } from "../../types/doctor";
+import { useDoctorProfileStatus } from "./useDoctorProfileStatus";
+import DoctorVerificationNotice from "./components/DoctorVerificationNotice";
 import "./DoctorAvailabilityPage.css";
 
 interface WeekdayDef {
@@ -72,6 +74,14 @@ function calculateShiftCapacity(startStr: string, endStr: string, durationMins: 
 }
 
 export default function DoctorAvailabilityPage() {
+  const {
+    profile,
+    verificationStatus,
+    isApproved,
+    isLoading: isProfileLoading,
+    refetch: refetchProfile,
+  } = useDoctorProfileStatus();
+
   const [availabilities, setAvailabilities] = useState<DoctorAvailabilityItem[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [generalError, setGeneralError] = useState<string | null>(null);
@@ -108,6 +118,10 @@ export default function DoctorAvailabilityPage() {
   const [archiveError, setArchiveError] = useState<string | null>(null);
 
   const fetchAvailability = useCallback(async () => {
+    if (!isApproved) {
+      setIsLoading(false);
+      return;
+    }
     setGeneralError(null);
     try {
       const response = await doctorService.getDoctorAvailability();
@@ -123,36 +137,15 @@ export default function DoctorAvailabilityPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isApproved]);
 
   useEffect(() => {
-    let isMounted = true;
-    const load = async () => {
-      try {
-        const response = await doctorService.getDoctorAvailability();
-        if (isMounted) {
-          setAvailabilities(response.items || []);
-        }
-      } catch (err: unknown) {
-        if (!isMounted) return;
-        const detail =
-          err && typeof err === "object" && "response" in err
-            ? (err as { response?: { data?: { detail?: string } } }).response?.data?.detail
-            : null;
-        setGeneralError(
-          detail || "Unable to synchronize weekly consulting shifts from clinical scheduling service."
-        );
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
-      }
-    };
-    void load();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
+    if (!isProfileLoading && isApproved) {
+      void fetchAvailability();
+    } else if (!isProfileLoading && !isApproved) {
+      setIsLoading(false);
+    }
+  }, [fetchAvailability, isApproved, isProfileLoading]);
 
   // Handle Add Shift Submission
   const handleAddShift = async (e: FormEvent) => {
@@ -378,6 +371,49 @@ export default function DoctorAvailabilityPage() {
     .reduce((acc, shift) => {
       return acc + calculateShiftCapacity(shift.start_time, shift.end_time, shift.slot_duration_minutes);
     }, 0);
+
+  if (isProfileLoading) {
+    return (
+      <DoctorLayout title="Consulting Availability & Schedule">
+        <div className="doc-avail-container" style={{ padding: "2rem 0" }}>
+          <div className="doc-skeleton-box" style={{ height: 80, marginBottom: 24 }} />
+          <div className="doc-skeleton-box" style={{ height: 140, marginBottom: 24 }} />
+          <div className="doc-skeleton-box" style={{ height: 320 }} />
+        </div>
+      </DoctorLayout>
+    );
+  }
+
+  if (!isApproved && verificationStatus) {
+    return (
+      <DoctorLayout title="Consulting Availability & Schedule">
+        <div className="doc-avail-container">
+          <header className="doc-avail-header">
+            <div className="doc-avail-title-group">
+              <div className="doc-avail-kicker">
+                <Stethoscope size={13} />
+                <span>CLINICAL SCHEDULING ENGINE</span>
+              </div>
+              <h1 className="doc-avail-title">Practice Availability Management</h1>
+              <p className="doc-avail-subtitle">
+                Consulting shift configuration and availability schedule management require an approved medical license and verified doctor account.
+              </p>
+            </div>
+          </header>
+
+          <DoctorVerificationNotice
+            status={verificationStatus}
+            licenseNumber={profile?.license_number}
+            specialization={profile?.specialization}
+            qualification={profile?.qualification}
+            moduleName="Availability & Consulting Shifts"
+            onRefresh={refetchProfile}
+            isRefreshing={isProfileLoading}
+          />
+        </div>
+      </DoctorLayout>
+    );
+  }
 
   return (
     <DoctorLayout title="Consulting Availability & Schedule">

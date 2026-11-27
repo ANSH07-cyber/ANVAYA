@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import {
   AlertCircle,
@@ -46,7 +46,7 @@ export default function DoctorConsultationPage() {
       : `Dr. ${user.full_name.trim()}`
     : "Doctor";
 
-  const fetchAppointment = async () => {
+  const fetchAppointment = useCallback(async () => {
     if (!appointmentId) {
       setErrorMessage("Appointment ID parameter missing from consultation route.");
       setIsLoading(false);
@@ -74,11 +74,11 @@ export default function DoctorConsultationPage() {
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [appointmentId]);
 
   useEffect(() => {
     void fetchAppointment();
-  }, [appointmentId]);
+  }, [fetchAppointment]);
 
   const handleCompletionSuccess = (record: HealthRecordRead) => {
     setAppointment((prev) => (prev ? { ...prev, status: "completed" } : null));

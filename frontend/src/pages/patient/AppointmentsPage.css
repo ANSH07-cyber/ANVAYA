@@ -1913,3 +1913,73 @@
   flex-shrink: 0;
   color: #168b80;
 }
+
+.reschedule-weekly-schedule {
+  padding: 11px 13px;
+  border: 1px solid #d5ebe5;
+  border-radius: 11px;
+  background: #f6fcfa;
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+}
+
+.reschedule-weekly-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  color: #183b43;
+}
+
+.reschedule-weekly-header small {
+  color: #6b8885;
+  font-weight: 500;
+}
+
+.reschedule-weekly-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #168b83;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.reschedule-weekly-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(165px, 1fr));
+  gap: 6px;
+}
+
+.reschedule-weekly-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 5px 8px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #d8ebe6;
+  font-size: 11px;
+  color: #183b43;
+}
+
+.reschedule-weekly-item strong {
+  color: #168b83;
+  font-weight: 750;
+}
+
+.reschedule-weekly-item small {
+  color: #6a8885;
+  margin-left: auto;
+}
+
+.reschedule-weekly-note,
+.reschedule-weekly-disclaimer {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #5d7c79;
+}

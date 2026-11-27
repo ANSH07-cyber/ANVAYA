@@ -126,14 +126,19 @@ def verify_csrf_and_origin(request: Request) -> None:
     referer = request.headers.get("Referer")
 
     request_origin = None
-    if origin:
-        request_origin = origin.rstrip("/")
+    if origin is not None:
+        # Reject explicit empty/whitespace Origin headers without falling back to Referer
+        request_origin = origin.strip().rstrip("/") or None
     elif referer:
-        parsed = urlparse(referer)
+        parsed = urlparse(referer.strip())
         if parsed.scheme and parsed.netloc:
-            request_origin = f"{parsed.scheme}://{parsed.netloc}"
+            request_origin = f"{parsed.scheme.lower()}://{parsed.netloc}"
 
-    allowed_origins = {o.rstrip("/") for o in settings.cors_origin_list}
+    allowed_origins = {
+        o.strip().rstrip("/")
+        for o in settings.cors_origin_list
+        if o.strip() and o.strip() != "*"
+    }
 
     if not request_origin or request_origin not in allowed_origins:
         raise HTTPException(
@@ -157,7 +162,15 @@ def verify_csrf_and_origin(request: Request) -> None:
             detail="CSRF token mismatch between cookie and header.",
         )
 
-    if not verify_csrf_token(csrf_cookie):
+    bound_user = getattr(request.state, "current_user", None)
+    expected_user_id = str(bound_user.id) if bound_user is not None else None
+    csrf_max_age = max(86400, settings.refresh_token_expire_days * 86400)
+
+    if not verify_csrf_token(
+        csrf_cookie,
+        expected_user_id=expected_user_id,
+        max_age_seconds=csrf_max_age,
+    ):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Invalid or expired CSRF token signature.",

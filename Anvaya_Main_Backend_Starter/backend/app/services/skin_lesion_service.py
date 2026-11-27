@@ -1,15 +1,16 @@
 from __future__ import annotations
 
+import hashlib
 import io
+import math
 import json
 import logging
-import os
 import warnings
 from functools import lru_cache
 from pathlib import Path
-from typing import Any, BinaryIO
+from typing import Any
 
-from PIL import Image
+from PIL import Image, ImageOps
 
 from app.core.config import settings
 
@@ -27,20 +28,22 @@ CLASS_DISPLAY_NAMES = {
     "vasc": "Vascular lesions",
 }
 
-RISK_LEVEL_MAP = {
-    "mel": "high",
-    "bcc": "medium",
-    "akiec": "medium",
-    "bkl": "low",
-    "df": "low",
-    "nv": "low",
-    "vasc": "low",
+TRAINED_INFERENCE_MODE = "pytorch_efficientnet_b0"
+CLASS_TO_INDEX = {name: index for index, name in enumerate(EXPECTED_CLASS_NAMES)}
+NORMALIZATION = {"mean": [0.485, 0.456, 0.406], "std": [0.229, 0.224, 0.225]}
+CHECKPOINT_CONTRACT = {
+    "architecture": "efficientnet_b0",
+    "num_classes": len(EXPECTED_CLASS_NAMES),
+    "class_names": EXPECTED_CLASS_NAMES,
+    "class_to_idx": CLASS_TO_INDEX,
+    "input_size": [224, 224],
+    "normalization": NORMALIZATION,
 }
 
 MANDATORY_DISCLAIMER = (
-    "This is an AI-assisted screening analysis, NOT a definitive diagnosis. "
-    "It must be reviewed by a qualified dermatologist. "
-    "Do not start, stop, or alter medical treatment based on this screening."
+    "This is not a diagnosis. Research screening for dermoscopic images. The model can miss malignancies "
+    "and can flag benign lesions. A low score does not rule out cancer. "
+    "A qualified clinician must assess the lesion. Do not change treatment based on this result."
 )
 
 MAX_UPLOAD_BYTES = 10 * 1024 * 1024  # 10 MB
@@ -50,192 +53,143 @@ MAX_IMAGE_SIDE = 8192
 ALLOWED_FORMATS = {"JPEG", "PNG"}
 
 
+class ModelUnavailableError(RuntimeError):
+    """No verified model prediction can be returned."""
+
+
+class InvalidImageError(ValueError):
+    """The submitted image could not be safely decoded."""
+
+
+class UnsupportedImageError(InvalidImageError):
+    """The declared or decoded format is unsupported."""
+
+
 class SkinLesionService:
     def __init__(self) -> None:
-        self.device_name = "cpu"
         self.model = None
-        self.transform = None
-        self.inference_mode = "fallback_calibrated_estimator"
-        self.model_version = "anvaya-skin-lesion-v1"
+        self.model_version: str | None = None
+        self.checkpoint_sha256: str | None = None
         self._initialize_model()
 
     def _initialize_model(self) -> None:
-        model_path = Path(settings.skin_lesion_model_path)
-        if not model_path.is_absolute():
-            backend_root = Path(__file__).resolve().parents[2]
-            model_path = backend_root / model_path
-
-        config_path = Path(settings.skin_lesion_config_path)
-        if not config_path.is_absolute():
-            backend_root = Path(__file__).resolve().parents[2]
-            config_path = backend_root / config_path
-
+        root = Path(__file__).resolve().parents[2]
+        model_path = root / settings.skin_lesion_model_path
+        config_path = root / settings.skin_lesion_config_path
         if not model_path.is_file():
-            logger.warning(
-                "Skin-lesion model checkpoint not found at %s. Using fallback estimator.",
-                model_path,
-            )
-            self.inference_mode = "fallback_calibrated_estimator"
+            logger.warning("Skin-lesion checkpoint unavailable.")
             return
 
         try:
             import torch
-            import torch.nn as nn
+            from torch import nn
             from torchvision.models import EfficientNet_B0_Weights, efficientnet_b0
+            from torchvision.transforms import InterpolationMode
 
+            # Hash the same bytes that are deserialized. Never load unrestricted pickle.
+            weights = model_path.read_bytes()
+            digest = hashlib.sha256(weights).hexdigest()
+            checkpoint = torch.load(io.BytesIO(weights), map_location="cpu", weights_only=True)
+            if not isinstance(checkpoint, dict):
+                raise ValueError("Expected a metadata-bearing checkpoint")
+            if any(checkpoint.get(key) != expected for key, expected in CHECKPOINT_CONTRACT.items()):
+                raise ValueError("Checkpoint contract mismatch")
+            version = checkpoint.get("model_version")
+            if not isinstance(version, str) or not version.strip() or len(version) > 100:
+                raise ValueError("Checkpoint version missing")
             if config_path.is_file():
-                try:
-                    with config_path.open("r", encoding="utf-8") as f:
-                        cfg = json.load(f)
-                        self.model_version = cfg.get("model_version", self.model_version)
-                except Exception as ex:
-                    logger.warning("Failed to parse config: %s", ex)
-
-            self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-            self.device_name = str(self.device)
+                with config_path.open(encoding="utf-8") as config_file:
+                    config = json.load(config_file)
+                if any(config.get(key) != expected for key, expected in CHECKPOINT_CONTRACT.items()):
+                    raise ValueError("Config contract mismatch")
+                if config.get("model_version") != version:
+                    raise ValueError("Config version mismatch")
+                if "checkpoint_sha256" in config and config["checkpoint_sha256"] != digest:
+                    raise ValueError("Config checkpoint digest mismatch")
 
             model = efficientnet_b0(weights=None)
-            model.classifier[1] = nn.Linear(
-                model.classifier[1].in_features,
-                len(EXPECTED_CLASS_NAMES),
+            model.classifier[1] = nn.Linear(model.classifier[1].in_features, len(EXPECTED_CLASS_NAMES))
+            model.load_state_dict(checkpoint["model_state_dict"], strict=True)
+            device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+            model.to(device).eval()
+            transform = EfficientNet_B0_Weights.IMAGENET1K_V1.transforms(
+                crop_size=224, resize_size=256, interpolation=InterpolationMode.BICUBIC,
+                mean=NORMALIZATION["mean"], std=NORMALIZATION["std"], antialias=True,
             )
+        except Exception as error:
+            logger.error("Skin-lesion checkpoint initialization failed (%s).", type(error).__name__)
+            return
 
-            checkpoint = torch.load(
-                model_path,
-                map_location="cpu",
-                weights_only=True,
-            )
-            state_dict = checkpoint.get("model_state_dict")
-            if not isinstance(state_dict, dict):
-                raise ValueError("Checkpoint does not contain 'model_state_dict'")
+        self.device = device
+        self.transform = transform
+        self.model_version = version
+        self.checkpoint_sha256 = digest
+        self.model = model
 
-            model.load_state_dict(state_dict, strict=True)
-            model.to(self.device)
-            model.eval()
-
-            self.model = model
-            self.transform = EfficientNet_B0_Weights.DEFAULT.transforms()
-            self.inference_mode = "pytorch_efficientnet_b0"
-            logger.info(
-                "Successfully loaded PyTorch EfficientNet-B0 checkpoint from %s on %s",
-                model_path,
-                self.device_name,
-            )
-        except Exception as e:
-            logger.error(
-                "Failed to load PyTorch checkpoint (%s). Falling back to calibrated estimator.",
-                e,
-            )
-            self.inference_mode = "fallback_calibrated_estimator"
-            self.model = None
-
-    def validate_image_bytes(self, raw_bytes: bytes) -> Image.Image:
-        if not raw_bytes:
-            raise ValueError("The uploaded image file is empty.")
-        if len(raw_bytes) > MAX_UPLOAD_BYTES:
-            raise ValueError(f"Image is too large. Maximum size is {MAX_UPLOAD_BYTES // (1024 * 1024)} MB.")
+    def validate_image_bytes(self, raw_bytes: bytes, content_type: str) -> Image.Image:
+        if not raw_bytes or len(raw_bytes) > MAX_UPLOAD_BYTES:
+            raise InvalidImageError("Image size is outside supported limits.")
+        expected_format = {"image/jpeg": "JPEG", "image/png": "PNG"}.get(content_type.lower())
+        if not expected_format:
+            raise UnsupportedImageError("Upload a JPEG or PNG dermoscopic image.")
 
         try:
             with warnings.catch_warnings():
                 warnings.simplefilter("error", Image.DecompressionBombWarning)
-                probe = Image.open(io.BytesIO(raw_bytes))
-                fmt = probe.format
-                if fmt not in ALLOWED_FORMATS:
-                    raise ValueError(f"Unsupported image format: {fmt}. Upload a JPEG or PNG image.")
-
-                width, height = probe.size
-                if (
-                    width < MIN_IMAGE_SIDE
-                    or height < MIN_IMAGE_SIDE
-                    or width > MAX_IMAGE_SIDE
-                    or height > MAX_IMAGE_SIDE
-                    or width * height > MAX_IMAGE_PIXELS
-                ):
-                    raise ValueError(
-                        f"Image dimensions ({width}x{height}) outside supported limits "
-                        f"({MIN_IMAGE_SIDE}x{MIN_IMAGE_SIDE} to {MAX_IMAGE_SIDE}x{MAX_IMAGE_SIDE})."
-                    )
-
-                # Return fresh RGB copy
-                return probe.convert("RGB")
-        except Image.DecompressionBombError:
-            raise ValueError("Image exceeds decompression safety limits.")
-        except (Image.UnidentifiedImageError, OSError) as ex:
-            raise ValueError(f"Unsupported image format: {ex}. Upload a JPEG or PNG image.")
-        except Exception as ex:
-            if isinstance(ex, ValueError):
-                raise
-            raise ValueError(f"Invalid or corrupted image: {ex}")
+                with Image.open(io.BytesIO(raw_bytes), formats=sorted(ALLOWED_FORMATS)) as probe:
+                    if probe.format != expected_format:
+                        raise UnsupportedImageError("The image content does not match its declared format.")
+                    width, height = probe.size
+                    if not (MIN_IMAGE_SIDE <= width <= MAX_IMAGE_SIDE and MIN_IMAGE_SIDE <= height <= MAX_IMAGE_SIDE) or width * height > MAX_IMAGE_PIXELS:
+                        raise InvalidImageError("Image dimensions are outside supported limits.")
+                    if getattr(probe, "n_frames", 1) != 1:
+                        raise InvalidImageError("Upload a single-frame dermoscopic image.")
+                    # Preserve the recorded orientation while stripping EXIF and other metadata.
+                    image = ImageOps.exif_transpose(probe).convert("RGB")
+                    image.info.clear()
+                    return image
+        except (Image.DecompressionBombWarning, Image.DecompressionBombError):
+            raise InvalidImageError("Image dimensions are outside supported limits.") from None
+        except InvalidImageError:
+            raise
+        except (OSError, ValueError, SyntaxError):
+            raise InvalidImageError("The image could not be decoded safely.") from None
 
     def predict(self, image: Image.Image, language: str = "en") -> dict[str, Any]:
-        """Execute inference using PyTorch model or calibrated fallback."""
-        if self.model is not None and self.inference_mode == "pytorch_efficientnet_b0":
-            try:
-                import torch
+        if self.model is None or not self.model_version or not self.checkpoint_sha256:
+            raise ModelUnavailableError()
 
-                with torch.inference_mode():
-                    tensor = self.transform(image).unsqueeze(0).to(self.device)
-                    logits = self.model(tensor)
-                    probs = torch.softmax(logits, dim=1).squeeze(0).cpu().tolist()
+        try:
+            import torch
 
-                prob_dict = {
-                    cls: round(float(prob), 4)
-                    for cls, prob in zip(EXPECTED_CLASS_NAMES, probs)
-                }
-            except Exception as e:
-                logger.error("Error during PyTorch inference: %s. Using fallback.", e)
-                prob_dict = self._fallback_probabilities(image)
-        else:
-            prob_dict = self._fallback_probabilities(image)
+            with torch.inference_mode():
+                inputs = self.transform(image).unsqueeze(0).to(self.device)
+                logits = self.model(inputs)
+                if tuple(logits.shape) != (1, len(EXPECTED_CLASS_NAMES)) or not torch.isfinite(logits).all():
+                    raise ValueError("Invalid model logits")
+                probs = torch.softmax(logits.float(), dim=1)[0].cpu().tolist()
+            if not all(math.isfinite(p) and 0.0 <= p <= 1.0 for p in probs) or not math.isclose(sum(probs), 1.0, abs_tol=1e-6):
+                raise ValueError("Invalid model probabilities")
+        except Exception as error:
+            logger.error("Skin-lesion inference failed (%s).", type(error).__name__)
+            raise ModelUnavailableError() from None
 
-        best_class = max(prob_dict, key=prob_dict.get)  # type: ignore
-        best_confidence = prob_dict[best_class]
-        label = CLASS_DISPLAY_NAMES.get(best_class, best_class)
-        risk_level = RISK_LEVEL_MAP.get(best_class, "medium")
-
-        # Bilingual educational content
-        education_content = self.get_education_content(best_class, language=language)
-        education_title = education_content.get("title") if education_content else label
-        education_summary = (
-            education_content.get("what_it_means") if education_content else None
-        )
-
+        prob_dict = dict(zip(EXPECTED_CLASS_NAMES, probs, strict=True))
+        best_class = EXPECTED_CLASS_NAMES[probs.index(max(probs))]
+        education = self.get_education_content(best_class, language)
         return {
             "predicted_class": best_class,
-            "predicted_label": label,
-            "confidence": best_confidence,
+            "predicted_label": CLASS_DISPLAY_NAMES[best_class],
+            "confidence": prob_dict[best_class],
             "probabilities": prob_dict,
-            "risk_level": risk_level,
             "disclaimer": MANDATORY_DISCLAIMER,
-            "education_title": education_title,
-            "education_summary": education_summary,
-            "education_content": education_content,
-            "inference_mode": self.inference_mode,
+            "education_title": education.get("title") if education else None,
+            "education_summary": education.get("what_it_means") if education else None,
+            "education_content": education,
+            "inference_mode": TRAINED_INFERENCE_MODE,
             "model_version": self.model_version,
+            "checkpoint_sha256": self.checkpoint_sha256,
         }
-
-    def _fallback_probabilities(self, image: Image.Image) -> dict[str, float]:
-        """Calibrated fallback inference based on color distribution when torch is inactive."""
-        # Compute mean luminance/hue for deterministic, calibrated distribution
-        w, h = image.size
-        sample = image.resize((32, 32))
-        pixels = list(sample.getdata())
-        avg_r = sum(p[0] for p in pixels) / len(pixels)
-        avg_g = sum(p[1] for p in pixels) / len(pixels)
-        avg_b = sum(p[2] for p in pixels) / len(pixels)
-
-        # Baseline HAM10000 distribution: nv is most common (~67%), then bkl (~11%), mel (~11%), bcc (~5%)
-        # Minor modulation based on red/blue channel
-        red_ratio = (avg_r + 1.0) / (avg_b + avg_g + 2.0)
-        if red_ratio > 1.2:
-            base = {"nv": 0.20, "mel": 0.45, "bcc": 0.15, "akiec": 0.10, "bkl": 0.05, "vasc": 0.03, "df": 0.02}
-        elif avg_b > avg_r:
-            base = {"nv": 0.65, "bkl": 0.15, "mel": 0.08, "bcc": 0.05, "df": 0.04, "akiec": 0.02, "vasc": 0.01}
-        else:
-            base = {"nv": 0.72, "bkl": 0.12, "mel": 0.06, "bcc": 0.04, "df": 0.03, "vasc": 0.02, "akiec": 0.01}
-
-        total = sum(base.values())
-        return {k: round(v / total, 4) for k, v in base.items()}
 
     def get_education_content(self, class_code: str, language: str = "en") -> dict[str, Any] | None:
         try:

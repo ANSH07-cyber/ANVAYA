@@ -21,6 +21,14 @@
   flex-wrap: wrap;
 }
 
+.doc-consult-header-title {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.01em;
+}
+
 .doc-consult-back-link {
   display: inline-flex;
   align-items: center;

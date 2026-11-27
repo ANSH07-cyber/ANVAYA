@@ -1,6 +1,6 @@
 import { Navigate, useLocation } from "react-router-dom";
 import { AlertCircle, RefreshCw } from "lucide-react";
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 
 import { useAuth } from "./AuthContext";
 import { getRoleHomePath } from "../utils/roleUtils";
@@ -64,5 +64,9 @@ export default function ProtectedRoute({
     return <Navigate to={getRoleHomePath(user.role)} replace />;
   }
 
+  // Remount patient views when the authenticated account changes.
+  if (allowedRoles?.length === 1 && allowedRoles[0] === "patient") {
+    return <Fragment key={user.id}>{children}</Fragment>;
+  }
   return children;
 }

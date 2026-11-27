@@ -18,6 +18,7 @@ import type {
   ConsentRequestRead,
   HealthDataScope,
 } from "../../types/consent";
+import { formatDoctorDisplayName } from "../../utils/formatters";
 import PatientConsentResponseModal from "./PatientConsentResponseModal";
 import "./PatientPendingRequestsSection.css";
 
@@ -261,9 +262,10 @@ export default function PatientPendingRequestsSection({
         !errorMessage && (
           <div className="patient-pending-cards-grid">
             {requests.map((request) => {
-              const doctorDisplayName = request.doctor_name
-                ? `Dr. ${request.doctor_name}`
-                : "Doctor";
+              const doctorDisplayName = formatDoctorDisplayName(
+                request.doctor_name,
+                "Doctor",
+              );
               const doctorSpecialty =
                 request.doctor_specialization || "Clinical Specialist";
               const clinicName = request.clinic_name || "ANVAYA Clinic";

@@ -46,10 +46,15 @@ export default function ConsultationHeader({ appointment }: ConsultationHeaderPr
   return (
     <header className="doc-consult-header">
       <div className="doc-consult-header-top">
-        <Link to="/doctor/appointments" className="doc-consult-back-link">
-          <ArrowLeft size={14} />
-          <span>Queue</span>
-        </Link>
+        <div style={{ display: "flex", alignItems: "center", gap: 14 }}>
+          <Link to="/doctor/appointments" className="doc-consult-back-link">
+            <ArrowLeft size={14} />
+            <span>Queue</span>
+          </Link>
+          <h1 className="doc-consult-header-title">
+            Clinical Consultation: {appointment.patient_name || "Patient Encounter"}
+          </h1>
+        </div>
 
         <div className="doc-consult-header-meta">
           <div className="doc-consult-patient-chip">

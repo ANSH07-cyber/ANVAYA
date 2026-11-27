@@ -6,7 +6,7 @@ from sqlalchemy import exists, func, or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session, selectinload
 
-from app.api.deps import require_roles
+from app.api.deps import require_roles, verify_csrf_and_origin
 from app.db.session import get_db
 
 from app.models.appointment import Appointment
@@ -47,6 +47,7 @@ def create_prescription(
     payload: PrescriptionCreate,
     current_user: User = Depends(require_roles("doctor")),
     db: Session = Depends(get_db),
+    _csrf: None = Depends(verify_csrf_and_origin),
 ) -> PrescriptionRead:
 
     # STEP 1: Find the authenticated doctor's profile.

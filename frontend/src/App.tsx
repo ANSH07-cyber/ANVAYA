@@ -25,6 +25,8 @@ import AppointmentOversightPage from "./pages/admin/AppointmentOversightPage";
 import AuditLogsPage from "./pages/admin/AuditLogsPage";
 import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
 import SkinLesionScreeningPage from "./pages/patient/SkinLesionScreeningPage";
+import InternalAudioReviewPage from "./pages/dev/InternalAudioReviewPage";
+import SkinHealthDevPreviewPage from "./pages/dev/SkinHealthDevPreviewPage";
 
 function App() {
   return (
@@ -231,6 +233,13 @@ function App() {
             </ProtectedRoute>
           }
         />
+
+        {import.meta.env.DEV && (
+          <>
+            <Route path="/dev/audio-review" element={<InternalAudioReviewPage />} />
+            <Route path="/dev/skin-health-preview" element={<SkinHealthDevPreviewPage />} />
+          </>
+        )}
 
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

@@ -37,6 +37,10 @@ export interface PatientAppointment {
   end_time: string;
   status: AppointmentStatus;
   reason: string | null;
+  revision?: number;
+  doctor_name?: string | null;
+  doctor_specialization?: string | null;
+  doctor_clinic_name?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -96,16 +100,41 @@ export interface AvailableSlotsResponse {
   total: number;
 }
 
+export interface DoctorPublicAvailabilityItem {
+  weekday: number;
+  start_time: string;
+  end_time: string;
+  slot_duration_minutes: number;
+}
+
+export interface DoctorPublicAvailabilityListResponse {
+  items: DoctorPublicAvailabilityItem[];
+  total: number;
+}
+
+export interface ApprovedDoctorSummary {
+  id: string;
+  full_name: string;
+  specialization: string;
+  qualification: string;
+  years_experience: number;
+  clinic_name: string | null;
+  consultation_fee: string | null;
+  bio: string | null;
+}
+
 export interface AppointmentCreateRequest {
   doctor_profile_id: string;
   appointment_date: string;
   start_time: string;
   reason?: string | null;
+  idempotency_key?: string | null;
 }
 
 export interface AppointmentRescheduleRequest {
   appointment_date: string;
   start_time: string;
+  idempotency_key?: string | null;
 }
 
 export type {

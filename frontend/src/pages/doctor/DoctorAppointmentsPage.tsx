@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertCircle,
+  AlertTriangle,
   CalendarCheck,
   CalendarDays,
   CheckCircle2,
@@ -20,15 +21,18 @@ import DoctorLayout from "../../layouts/DoctorLayout";
 import { doctorService } from "../../services/doctorService";
 import type {
   DoctorAppointmentItem,
+  DoctorAppointmentSummaryResponse,
   HealthRecordRead,
 } from "../../types/doctor";
+import { useDoctorProfileStatus } from "./useDoctorProfileStatus";
+import DoctorVerificationNotice from "./components/DoctorVerificationNotice";
 import AppointmentDetailDrawer from "./components/AppointmentDetailDrawer";
 import ConsultationCompletionModal from "./components/ConsultationCompletionModal";
 import DoctorAppointmentCancelModal from "./components/DoctorAppointmentCancelModal";
 import DoctorAppointmentRescheduleModal from "./components/DoctorAppointmentRescheduleModal";
 import "./DoctorAppointmentsPage.css";
 
-type QueueFilterTab = "all" | "today" | "upcoming" | "completed" | "cancelled";
+type QueueFilterTab = "all" | "today" | "upcoming" | "past_due" | "completed" | "cancelled";
 
 function getTodayKolkataDate(): string {
   return new Intl.DateTimeFormat("en-CA", {
@@ -83,7 +87,16 @@ function isAppointmentStarted(appointmentDate: string, startTime: string): boole
 }
 
 export default function DoctorAppointmentsPage() {
+  const {
+    profile,
+    verificationStatus,
+    isApproved,
+    isLoading: isProfileLoading,
+    refetch: refetchProfile,
+  } = useDoctorProfileStatus();
+
   const [appointments, setAppointments] = useState<DoctorAppointmentItem[]>([]);
+  const [summary, setSummary] = useState<DoctorAppointmentSummaryResponse | null>(null);
   const [totalAppointmentsOnRecord, setTotalAppointmentsOnRecord] = useState<number>(0);
   const [isPartialDataset, setIsPartialDataset] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -105,10 +118,24 @@ export default function DoctorAppointmentsPage() {
   const todayKolkata = getTodayKolkataDate();
 
   const fetchAppointments = useCallback(async () => {
+    if (!isApproved) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
+      // 1. Fetch server-backed summary for true counts
+      try {
+        const sum = await doctorService.getDoctorAppointmentSummary();
+        setSummary(sum);
+      } catch {
+        // Fallback gracefully
+      }
+
+      // 2. Fetch appointments
       const firstPage = await doctorService.getDoctorAppointments(100, 0);
       let loadedItems: DoctorAppointmentItem[] = [...firstPage.items];
       const totalCount = firstPage.total;
@@ -136,23 +163,44 @@ export default function DoctorAppointmentsPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isApproved]);
 
   useEffect(() => {
-    void fetchAppointments();
-  }, [fetchAppointments]);
+    if (!isProfileLoading && isApproved) {
+      void fetchAppointments();
+    } else if (!isProfileLoading && !isApproved) {
+      setIsLoading(false);
+    }
+  }, [fetchAppointments, isApproved, isProfileLoading]);
 
-  // Derived counts from loaded dataset
-  const todayCount = appointments.filter(
-    (a) => a.appointment_date === todayKolkata && a.status === "booked"
-  ).length;
+  // Derived counts with server summary priority
+  const todayCount = summary
+    ? summary.today_count
+    : appointments.filter(
+        (a) => a.appointment_date === todayKolkata && a.status === "booked"
+      ).length;
 
-  const upcomingCount = appointments.filter(
-    (a) => a.appointment_date > todayKolkata && a.status === "booked"
-  ).length;
+  const upcomingCount = summary
+    ? summary.upcoming_count
+    : appointments.filter(
+        (a) => a.appointment_date > todayKolkata && a.status === "booked"
+      ).length;
 
-  const completedCount = appointments.filter((a) => a.status === "completed").length;
-  const cancelledCount = appointments.filter((a) => a.status === "cancelled").length;
+  const pastDueAppointments = appointments.filter(
+    (a) => a.appointment_date < todayKolkata && a.status === "booked"
+  );
+
+  const pastDueCount = summary
+    ? summary.past_due_count
+    : pastDueAppointments.length;
+
+  const completedCount = summary
+    ? summary.completed_count
+    : appointments.filter((a) => a.status === "completed").length;
+
+  const cancelledCount = summary
+    ? summary.cancelled_count
+    : appointments.filter((a) => a.status === "cancelled").length;
 
   // Filter application
   const filteredAppointments = appointments.filter((appt) => {
@@ -161,6 +209,8 @@ export default function DoctorAppointmentsPage() {
       if (appt.appointment_date !== todayKolkata || appt.status !== "booked") return false;
     } else if (activeTab === "upcoming") {
       if (appt.appointment_date <= todayKolkata || appt.status !== "booked") return false;
+    } else if (activeTab === "past_due") {
+      if (appt.appointment_date >= todayKolkata || appt.status !== "booked") return false;
     } else if (activeTab === "completed") {
       if (appt.status !== "completed") return false;
     } else if (activeTab === "cancelled") {
@@ -229,6 +279,49 @@ export default function DoctorAppointmentsPage() {
   };
 
   const hasActiveFilters = Boolean(searchQuery.trim() || dateFilter || activeTab !== "all");
+
+  if (isProfileLoading) {
+    return (
+      <DoctorLayout title="Consultation Queue & Appointments">
+        <div className="doc-queue-container" style={{ padding: "2rem 0" }}>
+          <div className="doc-skeleton-box" style={{ height: 80, marginBottom: 24 }} />
+          <div className="doc-skeleton-box" style={{ height: 140, marginBottom: 24 }} />
+          <div className="doc-skeleton-box" style={{ height: 320 }} />
+        </div>
+      </DoctorLayout>
+    );
+  }
+
+  if (!isApproved && verificationStatus) {
+    return (
+      <DoctorLayout title="Consultation Queue & Appointments">
+        <div className="doc-queue-container">
+          <header className="doc-queue-header">
+            <div className="doc-queue-header-left">
+              <div className="doc-queue-kicker">
+                <Stethoscope size={13} />
+                <span>CONSULTATION QUEUE</span>
+              </div>
+              <h1 className="doc-queue-title">Patient Appointment Management</h1>
+              <p className="doc-queue-subtitle">
+                Access to clinical appointments and consultation rooms requires an approved professional medical profile.
+              </p>
+            </div>
+          </header>
+
+          <DoctorVerificationNotice
+            status={verificationStatus}
+            licenseNumber={profile?.license_number}
+            specialization={profile?.specialization}
+            qualification={profile?.qualification}
+            moduleName="Consultation Queue & Appointments"
+            onRefresh={refetchProfile}
+            isRefreshing={isProfileLoading}
+          />
+        </div>
+      </DoctorLayout>
+    );
+  }
 
   return (
     <DoctorLayout title="Consultation Queue & Appointments">
@@ -327,10 +420,10 @@ export default function DoctorAppointmentsPage() {
               <span className="doc-queue-metric-label">All Consultations</span>
               <CalendarDays size={16} color="#0ea5e9" />
             </div>
-            <div className="doc-queue-metric-val">{isLoading ? "—" : appointments.length}</div>
+            <div className="doc-queue-metric-val">{isLoading ? "—" : summary?.total ?? appointments.length}</div>
             <div className="doc-queue-metric-sub">
-              <span>Total loaded records</span>
-              {isPartialDataset && (
+              <span>Total records on file</span>
+              {isPartialDataset && !summary && (
                 <span className="doc-partial-pill" title={`Derived from ${appointments.length} of ${totalAppointmentsOnRecord} on record`}>
                   Partial ({appointments.length}/{totalAppointmentsOnRecord})
                 </span>
@@ -349,7 +442,7 @@ export default function DoctorAppointmentsPage() {
             <div className="doc-queue-metric-val">{isLoading ? "—" : todayCount}</div>
             <div className="doc-queue-metric-sub">
               <span>Booked today ({todayKolkata})</span>
-              {isPartialDataset && (
+              {isPartialDataset && !summary && (
                 <span className="doc-partial-pill" title={`Derived from ${appointments.length} of ${totalAppointmentsOnRecord} on record`}>
                   Partial ({appointments.length}/{totalAppointmentsOnRecord})
                 </span>
@@ -368,11 +461,26 @@ export default function DoctorAppointmentsPage() {
             <div className="doc-queue-metric-val">{isLoading ? "—" : upcomingCount}</div>
             <div className="doc-queue-metric-sub">
               <span>Future booked visits</span>
-              {isPartialDataset && (
+              {isPartialDataset && !summary && (
                 <span className="doc-partial-pill" title={`Derived from ${appointments.length} of ${totalAppointmentsOnRecord} on record`}>
                   Partial ({appointments.length}/{totalAppointmentsOnRecord})
                 </span>
               )}
+            </div>
+          </div>
+
+          <div
+            className={`doc-queue-metric-card ${activeTab === "past_due" ? "doc-queue-metric-card-active" : ""}`}
+            onClick={() => setActiveTab("past_due")}
+            style={pastDueCount > 0 ? { borderColor: "rgba(245, 158, 11, 0.4)", background: "rgba(245, 158, 11, 0.05)" } : undefined}
+          >
+            <div className="doc-queue-metric-header">
+              <span className="doc-queue-metric-label" style={pastDueCount > 0 ? { color: "#fbbf24" } : undefined}>Past-Due</span>
+              <AlertTriangle size={16} color={pastDueCount > 0 ? "#f59e0b" : "#94a3b8"} />
+            </div>
+            <div className="doc-queue-metric-val" style={pastDueCount > 0 ? { color: "#fbbf24" } : undefined}>{isLoading ? "—" : pastDueCount}</div>
+            <div className="doc-queue-metric-sub">
+              <span>{pastDueCount > 0 ? "Requires action" : "Zero overdue visits"}</span>
             </div>
           </div>
 
@@ -387,7 +495,7 @@ export default function DoctorAppointmentsPage() {
             <div className="doc-queue-metric-val">{isLoading ? "—" : completedCount}</div>
             <div className="doc-queue-metric-sub">
               <span>Finished consultations</span>
-              {isPartialDataset && (
+              {isPartialDataset && !summary && (
                 <span className="doc-partial-pill" title={`Derived from ${appointments.length} of ${totalAppointmentsOnRecord} on record`}>
                   Partial ({appointments.length}/{totalAppointmentsOnRecord})
                 </span>
@@ -405,8 +513,8 @@ export default function DoctorAppointmentsPage() {
             </div>
             <div className="doc-queue-metric-val">{isLoading ? "—" : cancelledCount}</div>
             <div className="doc-queue-metric-sub">
-              <span>Patient cancelled</span>
-              {isPartialDataset && (
+              <span>Cancelled visits</span>
+              {isPartialDataset && !summary && (
                 <span className="doc-partial-pill" title={`Derived from ${appointments.length} of ${totalAppointmentsOnRecord} on record`}>
                   Partial ({appointments.length}/{totalAppointmentsOnRecord})
                 </span>
@@ -426,7 +534,7 @@ export default function DoctorAppointmentsPage() {
               onClick={() => setActiveTab("all")}
             >
               <span>All</span>
-              <span className="doc-queue-tab-count">{appointments.length}</span>
+              <span className="doc-queue-tab-count">{summary?.total ?? appointments.length}</span>
             </button>
             <button
               type="button"
@@ -447,6 +555,19 @@ export default function DoctorAppointmentsPage() {
             >
               <span>Upcoming</span>
               <span className="doc-queue-tab-count">{upcomingCount}</span>
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={activeTab === "past_due"}
+              className={`doc-queue-tab ${activeTab === "past_due" ? "doc-queue-tab-active" : ""}`}
+              onClick={() => setActiveTab("past_due")}
+              style={pastDueCount > 0 ? { color: "#fbbf24" } : undefined}
+            >
+              <span>Past-Due</span>
+              <span className="doc-queue-tab-count" style={pastDueCount > 0 ? { background: "rgba(245, 158, 11, 0.2)", color: "#fbbf24" } : undefined}>
+                {pastDueCount}
+              </span>
             </button>
             <button
               type="button"
@@ -582,6 +703,19 @@ export default function DoctorAppointmentsPage() {
                           <span className={`doc-status-tag ${appt.status}`}>
                             {appt.status}
                           </span>
+                          {isBooked && appt.appointment_date < todayKolkata && (
+                            <span
+                              className="doc-status-tag"
+                              style={{
+                                marginLeft: 6,
+                                background: "rgba(245, 158, 11, 0.15)",
+                                borderColor: "rgba(245, 158, 11, 0.4)",
+                                color: "#fbbf24",
+                              }}
+                            >
+                              Overdue
+                            </span>
+                          )}
                         </td>
 
                         {/* Actions */}

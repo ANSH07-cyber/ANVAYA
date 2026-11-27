@@ -23,6 +23,7 @@ import type {
   HealthDataScope,
   PatientConsent,
 } from "../../types/consent";
+import { formatDoctorDisplayName } from "../../utils/formatters";
 import "./RevokeAllDoctorConsentModal.css";
 
 export interface RevokeAllDoctorConsentModalProps {
@@ -209,7 +210,7 @@ export default function RevokeAllDoctorConsentModal({
 
     try {
       const response = await consentService.revokeAllConsentsForDoctor(doctorProfileId);
-      const doctorName = doctor?.full_name ? `Dr. ${doctor.full_name}` : "the doctor";
+      const doctorName = formatDoctorDisplayName(doctor?.full_name, "the doctor");
       const revokedCount = response.items.length;
       const successMessage = `All EHR access for ${doctorName} has been completely revoked (${revokedCount} active grant${revokedCount === 1 ? "" : "s"} closed).`;
 
@@ -230,9 +231,10 @@ export default function RevokeAllDoctorConsentModal({
 
   if (!isOpen) return null;
 
-  const doctorDisplayName = doctor?.full_name
-    ? `Dr. ${doctor.full_name}`
-    : "Doctor (details unavailable)";
+  const doctorDisplayName = formatDoctorDisplayName(
+    doctor?.full_name,
+    "Doctor (details unavailable)",
+  );
   const doctorSpecialty =
     doctor?.specialization || "Clinical Specialist";
   const clinicName = doctor?.clinic_name || "ANVAYA Partner Clinic";

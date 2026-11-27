@@ -1,543 +1,895 @@
-
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
-import { useAuth } from "../../app/AuthContext";
 import {
-  Activity,
+  AlertCircle,
   ArrowRight,
-  CalendarDays,
+  Calendar,
+  CalendarPlus,
   CheckCircle2,
-  Clock3,
+  Clock,
   FileText,
-  FolderHeart,
-  HeartPulse,
+  FolderOpen,
+  MapPin,
   Pill,
-  ScanFace,
-  Search,
+  RefreshCw,
+  Scan,
+  ShieldAlert,
   ShieldCheck,
-  Sparkles,
   Stethoscope,
 } from "lucide-react";
+import { useAuth } from "../../app/AuthContext";
 import PortalLayout from "../../layouts/PortalLayout";
+import { consentService } from "../../services/consentService";
+import {
+  HISTORY_PAGE_SIZE,
+  appointmentInstant,
+  formatAppointmentTime,
+  nextBookedAppointment,
+  patientReadError,
+  readPatientPage,
+  scanPatientPages,
+} from "../../services/patientReliability";
 import { patientService } from "../../services/patientService";
+import type { ConsentDoctor } from "../../types/consent";
 import type {
   PatientAppointment,
   PatientHealthRecord,
   PatientPrescription,
 } from "../../types/patient";
+import {
+  BannerBotanicalAccent,
+  ConsentBotanicalAccent,
+  HeaderBotanicalAccent,
+} from "./PatientBotanicalArt";
 import { patientNavigation } from "./patientNavigation";
 import "./PatientDashboard.css";
 
-function getGreeting() {
-  const hour = new Date().getHours();
+const MAX_RECENT_CARE_ITEMS = 3;
 
-  if (hour < 12) return "Good morning";
-  if (hour < 17) return "Good afternoon";
-  return "Good evening";
+interface CareTimelineItem {
+  id: string;
+  kind: "record" | "prescription";
+  title: string;
+  subtitle: string;
+  dateLabel: string;
+  sortKey: string;
+  to: string;
 }
 
-function getFormattedDate() {
-  return new Intl.DateTimeFormat("en-IN", {
-    weekday: "long",
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  }).format(new Date());
-}
-
-function formatDate(value: string) {
-  const date = new Date(value);
-
-  if (Number.isNaN(date.getTime())) return value;
-
+function formatReadableDate(isoValue: string): string {
+  const datePart = isoValue.slice(0, 10);
+  const parsed = new Date(`${datePart}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) {
+    return datePart;
+  }
   return new Intl.DateTimeFormat("en-IN", {
     day: "numeric",
     month: "short",
     year: "numeric",
-  }).format(date);
+    timeZone: "UTC",
+  }).format(parsed);
 }
 
-function formatTime(value: string) {
-  const [hours, minutes] = value.split(":").map(Number);
-
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) return value;
-
-  const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
-
+function formatWeekday(isoValue: string): string {
+  const datePart = isoValue.slice(0, 10);
+  const parsed = new Date(`${datePart}T00:00:00Z`);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
   return new Intl.DateTimeFormat("en-IN", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).format(date);
+    weekday: "long",
+    timeZone: "UTC",
+  }).format(parsed);
 }
 
-function getAppointmentDateTime(appointment: PatientAppointment) {
-  return new Date(
-    `${appointment.appointment_date}T${appointment.start_time}`,
-  );
+function formatHeaderToday(): string {
+  return new Intl.DateTimeFormat("en-IN", {
+    weekday: "long",
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+  }).format(new Date());
 }
 
-function getUpcomingAppointment(appointments: PatientAppointment[]) {
-  const now = new Date();
-
-  return appointments
-    .filter((appointment) => {
-      return (
-        appointment.status === "booked" &&
-        getAppointmentDateTime(appointment) >= now
-      );
-    })
-    .sort(
-      (a, b) =>
-        getAppointmentDateTime(a).getTime() -
-        getAppointmentDateTime(b).getTime(),
-    )[0] ?? null;
+function formatDoctorDisplayName(fullName: string): string {
+  const trimmed = fullName.trim();
+  if (!trimmed) {
+    return "Approved clinician";
+  }
+  return /^dr\.?\s/i.test(trimmed) ? trimmed : `Dr. ${trimmed}`;
 }
 
-type DashboardActivity = {
-  id: string;
-  title: string;
-  description: string;
-  date: string;
-  timestamp: number;
-  icon: typeof FileText;
-  tone: string;
-};
+function extractDoctorInitials(fullName?: string | null): string {
+  if (!fullName) {
+    return "AC";
+  }
+  const cleaned = fullName.replace(/^dr\.?\s+/i, "").trim();
+  if (!cleaned) {
+    return "AC";
+  }
+  const parts = cleaned.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) {
+    return parts[0].slice(0, 2).toUpperCase();
+  }
+  return `${parts[0][0]}${parts[parts.length - 1][0]}`.toUpperCase();
+}
+
+function isPlainSafeText(value: string | null | undefined): value is string {
+  if (typeof value !== "string") {
+    return false;
+  }
+  const trimmed = value.trim();
+  return trimmed.length > 0 && !trimmed.startsWith("enc:");
+}
+
+function fetchDashboard(signal: AbortSignal) {
+  return Promise.allSettled([
+    scanPatientPages(patientService.getMyAppointments, signal),
+    readPatientPage(patientService.getMyHealthRecords, {
+      limit: HISTORY_PAGE_SIZE,
+      offset: 0,
+      signal,
+    }),
+    readPatientPage(patientService.getMyPrescriptions, {
+      limit: HISTORY_PAGE_SIZE,
+      offset: 0,
+      signal,
+    }),
+    consentService.getDoctors(),
+    consentService.getPendingConsentRequests({ limit: 1, offset: 0 }),
+  ]);
+}
 
 export default function PatientDashboard() {
   const { user } = useAuth();
-
-  const displayName = user?.full_name?.trim() || "Patient";
-  const firstName = displayName.split(/\s+/)[0] || "Patient";
-
   const [appointments, setAppointments] = useState<PatientAppointment[]>([]);
-  const [healthRecords, setHealthRecords] = useState<PatientHealthRecord[]>([]);
+  const [partialAppointments, setPartialAppointments] = useState(false);
+  const [appointmentError, setAppointmentError] = useState<string | null>(null);
+
+  const [records, setRecords] = useState<PatientHealthRecord[]>([]);
+  const [recordTotal, setRecordTotal] = useState<number | null>(null);
+  const [recordsError, setRecordsError] = useState<string | null>(null);
+
   const [prescriptions, setPrescriptions] = useState<PatientPrescription[]>([]);
+  const [prescriptionTotal, setPrescriptionTotal] = useState<number | null>(null);
+  const [prescriptionsError, setPrescriptionsError] = useState<string | null>(null);
+
+  const [doctorsById, setDoctorsById] = useState<Record<string, ConsentDoctor>>({});
+  const [pendingConsentCount, setPendingConsentCount] = useState<number | null>(null);
+
+  const [scheduleTime, setScheduleTime] = useState(Date.now);
   const [loading, setLoading] = useState(true);
-  const [loadError, setLoadError] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+  const [reloadToken, setReloadToken] = useState(0);
+
+  const requestRevisionRef = useRef(0);
+  const activeOwnerRef = useRef<string | null>(user?.id ?? null);
 
   useEffect(() => {
-    let isMounted = true;
+    activeOwnerRef.current = user?.id ?? null;
+    requestRevisionRef.current += 1;
+    const currentRevision = requestRevisionRef.current;
+    const currentOwner = activeOwnerRef.current;
 
-    async function loadDashboard() {
+    const controller = new AbortController();
+
+    if (reloadToken === 0) {
       setLoading(true);
-      setLoadError(false);
-
-      const results = await Promise.allSettled([
-        patientService.getMyAppointments(),
-        patientService.getMyHealthRecords(),
-        patientService.getMyPrescriptions(),
-      ]);
-
-      if (!isMounted) return;
-
-      let hasError = false;
-
-      if (results[0].status === "fulfilled") {
-        setAppointments(results[0].value.items);
-      } else {
-        hasError = true;
-      }
-
-      if (results[1].status === "fulfilled") {
-        setHealthRecords(results[1].value.items);
-      } else {
-        hasError = true;
-      }
-
-      if (results[2].status === "fulfilled") {
-        setPrescriptions(results[2].value.items);
-      } else {
-        hasError = true;
-      }
-
-      setLoadError(hasError);
-      setLoading(false);
+    } else {
+      setRefreshing(true);
     }
 
-    loadDashboard();
+    fetchDashboard(controller.signal).then(
+      ([
+        appointmentResult,
+        recordResult,
+        prescriptionResult,
+        doctorResult,
+        pendingConsentResult,
+      ]) => {
+        if (
+          controller.signal.aborted ||
+          requestRevisionRef.current !== currentRevision ||
+          activeOwnerRef.current !== currentOwner
+        ) {
+          return;
+        }
+
+        if (appointmentResult.status === "fulfilled") {
+          setAppointments(appointmentResult.value.items);
+          setPartialAppointments(!appointmentResult.value.complete);
+          setAppointmentError(null);
+        } else {
+          setAppointments([]);
+          setPartialAppointments(false);
+          setAppointmentError(
+            patientReadError(appointmentResult.reason, "appointments"),
+          );
+        }
+
+        if (recordResult.status === "fulfilled") {
+          setRecords(recordResult.value.items);
+          setRecordTotal(recordResult.value.total);
+          setRecordsError(null);
+        } else {
+          setRecords([]);
+          setRecordTotal(null);
+          setRecordsError(
+            patientReadError(recordResult.reason, "health records"),
+          );
+        }
+
+        if (prescriptionResult.status === "fulfilled") {
+          setPrescriptions(prescriptionResult.value.items);
+          setPrescriptionTotal(prescriptionResult.value.total);
+          setPrescriptionsError(null);
+        } else {
+          setPrescriptions([]);
+          setPrescriptionTotal(null);
+          setPrescriptionsError(
+            patientReadError(prescriptionResult.reason, "prescriptions"),
+          );
+        }
+
+        if (doctorResult.status === "fulfilled") {
+          const doctorMap: Record<string, ConsentDoctor> = {};
+          for (const doctor of doctorResult.value.items) {
+            doctorMap[doctor.id] = doctor;
+          }
+          setDoctorsById(doctorMap);
+        }
+
+        if (pendingConsentResult.status === "fulfilled") {
+          setPendingConsentCount(pendingConsentResult.value.total);
+        } else {
+          setPendingConsentCount(null);
+        }
+
+        setScheduleTime(Date.now());
+        setLoading(false);
+        setRefreshing(false);
+      },
+    );
 
     return () => {
-      isMounted = false;
+      controller.abort();
     };
-  }, []);
+  }, [user?.id, reloadToken]);
+
+  const todayLabel = useMemo(() => formatHeaderToday(), []);
 
   const upcomingAppointment = useMemo(
-    () => getUpcomingAppointment(appointments),
-    [appointments],
+    () => partialAppointments ? null : nextBookedAppointment(appointments, scheduleTime),
+    [appointments, partialAppointments, scheduleTime],
+  );
+  useEffect(() => {
+    if (!upcomingAppointment) return;
+    const start = appointmentInstant(
+      upcomingAppointment.appointment_date,
+      upcomingAppointment.start_time,
+    );
+    const updateSchedule = () => setScheduleTime(Date.now());
+    const timer = window.setTimeout(updateSchedule, Math.max(0, Math.min(start - Date.now(), 2_147_483_647)));
+    window.addEventListener("focus", updateSchedule);
+    return () => {
+      window.clearTimeout(timer);
+      window.removeEventListener("focus", updateSchedule);
+    };
+  }, [upcomingAppointment, scheduleTime]);
+
+  const upcomingDoctor = upcomingAppointment
+    ? doctorsById[upcomingAppointment.doctor_profile_id]
+    : undefined;
+
+  const upcomingWeekday = upcomingAppointment
+    ? formatWeekday(upcomingAppointment.appointment_date)
+    : "";
+
+  const recentCareItems = useMemo<CareTimelineItem[]>(() => {
+    const items: CareTimelineItem[] = [];
+
+    for (const record of records) {
+      items.push({
+        id: `record-${record.id}`,
+        kind: "record",
+        title: "Consultation record documented",
+        subtitle: isPlainSafeText(record.follow_up_instructions)
+          ? "Follow-up guidance available in records"
+          : "Visit summary on file",
+        dateLabel: formatReadableDate(record.visit_date),
+        sortKey: record.visit_date,
+        to: "/patient/records",
+      });
+    }
+
+    for (const prescription of prescriptions) {
+      const count = prescription.items.length;
+      items.push({
+        id: `rx-${prescription.id}`,
+        kind: "prescription",
+        title: "Prescription issued",
+        subtitle:
+          count === 1
+            ? "1 prescribed medication on file"
+            : count > 1
+              ? `${count} prescribed medications on file`
+              : "Prescription details on file",
+        dateLabel: formatReadableDate(prescription.issued_at),
+        sortKey: prescription.issued_at,
+        to: "/patient/prescriptions",
+      });
+    }
+
+    items.sort((a, b) => b.sortKey.localeCompare(a.sortKey));
+    return items.slice(0, MAX_RECENT_CARE_ITEMS);
+  }, [records, prescriptions]);
+
+  const activityErrors = useMemo(() => {
+    const errors: string[] = [];
+    if (recordsError) {
+      errors.push(
+        recordsError.toLowerCase().startsWith("health records")
+          ? recordsError
+          : `Health records: ${recordsError}`,
+      );
+    }
+    if (prescriptionsError) {
+      errors.push(
+        prescriptionsError.toLowerCase().startsWith("prescriptions")
+          ? prescriptionsError
+          : `Prescriptions: ${prescriptionsError}`,
+      );
+    }
+    return errors;
+  }, [recordsError, prescriptionsError]);
+
+  const showNoticeBanner = Boolean(
+    appointmentError || partialAppointments || activityErrors.length > 0,
   );
 
-  const activities = useMemo<DashboardActivity[]>(() => {
-    const recordActivities: DashboardActivity[] = healthRecords.map(
-      (record) => ({
-        id: `record-${record.id}`,
-        title: "Consultation record added",
-        description:
-          record.diagnosis ||
-          record.chief_complaint ||
-          "A consultation record is available in your health history.",
-        date: formatDate(record.visit_date),
-        timestamp: new Date(record.visit_date).getTime(),
-        icon: FileText,
-        tone: "teal",
-      }),
-    );
+  const noticeMessage = useMemo(() => {
+    if (appointmentError && activityErrors.length === 2) {
+      return "Your dashboard summary could not be loaded right now. Please retry to verify your schedule and records.";
+    }
+    if (appointmentError) {
+      return `Unable to verify upcoming appointments (${appointmentError}).`;
+    }
+    if (partialAppointments) {
+      return "Some appointment pages did not finish loading. The next visit could not be verified.";
+    }
+    if (activityErrors.length > 0) {
+      return "Part of your recent care feed could not be loaded right now.";
+    }
+    return "";
+  }, [appointmentError, partialAppointments, activityErrors.length]);
 
-    const prescriptionActivities: DashboardActivity[] = prescriptions.map(
-      (prescription) => ({
-        id: `prescription-${prescription.id}`,
-        title: "Prescription issued",
-        description:
-          prescription.items.length > 0
-            ? `${prescription.items.length} medicine item(s) prescribed.`
-            : "A prescription is available in your records.",
-        date: formatDate(prescription.issued_at),
-        timestamp: new Date(prescription.issued_at).getTime(),
-        icon: Pill,
-        tone: "blue",
-      }),
-    );
-
-    return [...recordActivities, ...prescriptionActivities]
-      .sort((a, b) => b.timestamp - a.timestamp)
-      .slice(0, 4);
-  }, [healthRecords, prescriptions]);
-
-  const stats = [
-    {
-      label: "Appointments",
-      value: appointments.length,
-      detail: `${appointments.filter((item) => item.status === "booked").length} booked`,
-      icon: CalendarDays,
-      tone: "teal",
-    },
-    {
-      label: "Prescriptions",
-      value: prescriptions.length,
-      detail: "Issued prescriptions",
-      icon: Pill,
-      tone: "blue",
-    },
-    {
-      label: "Health records",
-      value: healthRecords.length,
-      detail: "Available care history",
-      icon: FileText,
-      tone: "violet",
-    },
-  ];
+  const handleRetry = () => {
+    if (refreshing) {
+      return;
+    }
+    setReloadToken((prev) => prev + 1);
+  };
 
   return (
     <PortalLayout
       roleLabel="Patient"
-      userName={displayName}
-      userMeta="Patient account"
+      userName={user?.full_name ?? "Patient"}
+      userMeta={user?.email ?? "Care Summary"}
       navItems={patientNavigation}
     >
       <div className="patient-dashboard">
-        <div className="patient-page-heading">
-          <div>
-            <span className="patient-eyebrow">
-              {getFormattedDate().toUpperCase()}
-            </span>
-            <h1>
-              {getGreeting()}, {firstName} <span>👋</span>
-            </h1>
-            <p>
-              Your health journey, thoughtfully organized in one place.
+        <header className="patient-page-header">
+          <HeaderBotanicalAccent />
+          <div className="patient-page-heading">
+            <h1 className="patient-page-title">Overview</h1>
+            <p className="patient-page-subtitle">
+              Your care, appointments and health information in one place.
             </p>
           </div>
+          <div className="patient-header-date">
+            <Calendar size={17} aria-hidden="true" />
+            <span>{todayLabel}</span>
+          </div>
+        </header>
 
-          <Link className="patient-primary-action" to="/patient/doctors">
-            <Search size={17} />
-            Find a doctor
-          </Link>
-        </div>
-
-        {loadError && (
-          <div className="preview-notice" role="alert">
-            <div className="preview-notice-icon">
-              <ShieldCheck size={19} />
+        {showNoticeBanner && (
+          <div className="patient-notice-banner" role="alert">
+            <div className="patient-notice-copy">
+              <AlertCircle
+                size={18}
+                className="patient-notice-icon"
+                aria-hidden="true"
+              />
+              <div>
+                <p className="patient-notice-title">{noticeMessage}</p>
+                {activityErrors.length > 0 && !appointmentError && (
+                  <p className="patient-notice-detail">
+                    {activityErrors.join(" ")}
+                  </p>
+                )}
+              </div>
             </div>
-            <div>
-              <strong>Some dashboard information could not be loaded</strong>
-              <p>
-                Please refresh the page or try again later. Information that
-                failed to load is not displayed as zero.
-              </p>
-            </div>
+            <button
+              type="button"
+              className="patient-btn-retry"
+              onClick={handleRetry}
+              disabled={refreshing || loading}
+            >
+              <RefreshCw
+                size={16}
+                className={refreshing ? "patient-spin" : undefined}
+                aria-hidden="true"
+              />
+              <span>{refreshing ? "Refreshing..." : "Retry"}</span>
+            </button>
           </div>
         )}
 
-        <section className="patient-stats-grid" aria-label="Health overview">
-          {stats.map((stat) => {
-            const Icon = stat.icon;
-
-            return (
-              <article className="patient-stat-card" key={stat.label}>
-                <div className={`patient-stat-icon ${stat.tone}`}>
-                  <Icon size={21} strokeWidth={1.9} />
+        <div className="patient-bento-grid">
+          <section
+            className="patient-appt-shell"
+            aria-labelledby="next-appointment-heading"
+          >
+            <div className="patient-appt-banner">
+              <BannerBotanicalAccent />
+              <div className="patient-appt-banner-row">
+                <div className="patient-appt-heading-group">
+                  <Calendar
+                    size={21}
+                    className="patient-appt-header-icon"
+                    aria-hidden="true"
+                  />
+                  <h2
+                    id="next-appointment-heading"
+                    className="patient-appt-heading"
+                  >
+                    Next appointment
+                  </h2>
                 </div>
-                <div className="patient-stat-copy">
-                  <span>{stat.label}</span>
-                  <strong>
-                    {loading ? "—" : loadError ? "—" : stat.value}
-                  </strong>
-                  <small>
-                    {loading
-                      ? "Loading..."
-                      : loadError
-                        ? "Unable to load"
-                        : stat.detail}
-                  </small>
-                </div>
-                <span className="stat-decoration" aria-hidden="true" />
-              </article>
-            );
-          })}
-        </section>
-
-        <section className="patient-main-grid">
-          <div className="patient-section-column">
-            <div className="patient-section-heading">
-              <div>
-                <span className="patient-section-kicker">YOUR SCHEDULE</span>
-                <h2>Upcoming appointment</h2>
-              </div>
-              <Link to="/patient/appointments" className="patient-text-link">
-                View all <ArrowRight size={15} />
-              </Link>
-            </div>
-
-            <article className="upcoming-appointment-card">
-              <div className="appointment-card-top">
-                <div className="appointment-type">
-                  <span className="appointment-type-icon">
-                    <Stethoscope size={17} />
+                {upcomingAppointment && !loading && !appointmentError && (
+                  <span className="patient-booked-pill">
+                    <CheckCircle2 size={14} aria-hidden="true" />
+                    <span>Booked</span>
                   </span>
-                  <span>CONSULTATION</span>
-                </div>
-                {upcomingAppointment && (
-                  <span className="appointment-demo-label">
-                    {upcomingAppointment.status.toUpperCase()}
+                )}
+                {partialAppointments && !appointmentError && (
+                  <span className="patient-booked-pill patient-booked-pill--caution">
+                    <span>Partial schedule</span>
                   </span>
                 )}
               </div>
+            </div>
 
-              {loading ? (
-                <div className="appointment-doctor">
-                  <div className="appointment-doctor-info">
-                    <h3>Loading appointment...</h3>
-                    <p>Please wait while we retrieve your schedule.</p>
+            {loading && !upcomingAppointment && !appointmentError ? (
+              <div className="patient-appt-body-wrap">
+                <div className="patient-appt-surface" aria-busy="true">
+                  <div className="patient-skeleton-block">
+                    <div className="patient-skeleton patient-skeleton--title" />
+                    <div className="patient-skeleton patient-skeleton--line" />
+                    <div className="patient-skeleton patient-skeleton--short" />
                   </div>
                 </div>
-              ) : loadError ? (
-                <div className="appointment-doctor">
-                  <div className="appointment-doctor-info">
-                    <h3>Appointment information unavailable</h3>
-                    <p>Please try refreshing the page.</p>
-                  </div>
-                </div>
-              ) : upcomingAppointment ? (
-                <>
-                  <div className="appointment-doctor">
-                    <div className="doctor-avatar-placeholder">
-                      <Stethoscope size={22} />
-                    </div>
-                    <div className="appointment-doctor-info">
-                      <h3>Doctor consultation</h3>
-                      <p>Your scheduled appointment</p>
-                    </div>
-                  </div>
-
-                  <div className="appointment-divider" />
-
-                  <div className="appointment-details">
-                    <div>
-                      <CalendarDays size={17} />
-                      <span>
-                        <small>DATE</small>
-                        <strong>
-                          {formatDate(upcomingAppointment.appointment_date)}
-                        </strong>
-                      </span>
-                    </div>
-                    <div>
-                      <Clock3 size={17} />
-                      <span>
-                        <small>TIME</small>
-                        <strong>
-                          {formatTime(upcomingAppointment.start_time)} –{" "}
-                          {formatTime(upcomingAppointment.end_time)}
-                        </strong>
-                      </span>
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <div className="appointment-doctor">
-                  <div className="doctor-avatar-placeholder">
-                    <CalendarDays size={22} />
-                  </div>
-                  <div className="appointment-doctor-info">
-                    <h3>No upcoming appointments</h3>
-                    <p>Your next scheduled consultation will appear here.</p>
-                  </div>
-                </div>
-              )}
-
-              <Link
-                to="/patient/appointments"
-                className="appointment-details-link"
-              >
-                View appointments <ArrowRight size={16} />
-              </Link>
-            </article>
-
-            <div className="patient-section-heading shortcuts-heading">
-              <div>
-                <span className="patient-section-kicker">QUICK ACCESS</span>
-                <h2>Your care, your way</h2>
               </div>
-            </div>
-
-            <div className="patient-shortcuts-grid">
-              <Link to="/patient/doctors" className="patient-shortcut-card">
-                <div className="shortcut-icon teal">
-                  <Search size={20} />
+            ) : appointmentError ? (
+              <div className="patient-appt-body-wrap">
+                <div className="patient-appt-surface patient-appt-surface--state">
+                  <div className="patient-state-panel patient-state-panel--error">
+                    <h3 className="patient-state-title">
+                      Schedule temporarily unavailable
+                    </h3>
+                    <p className="patient-state-description">
+                      We could not confirm your upcoming visits right now. Use
+                      Retry above to refresh your schedule, or open Appointments
+                      directly.
+                    </p>
+                  </div>
                 </div>
-                <strong>Find a doctor</strong>
-                <span>Explore specialists and care options</span>
-                <ArrowRight size={17} className="shortcut-arrow" />
-              </Link>
-
-              <Link to="/patient/records" className="patient-shortcut-card">
-                <div className="shortcut-icon blue">
-                  <FolderHeart size={20} />
+                <div className="patient-appt-footer patient-appt-footer--end">
+                  <Link to="/patient/appointments" className="patient-appt-cta">
+                    <span>View appointments</span>
+                    <ArrowRight size={16} aria-hidden="true" />
+                  </Link>
                 </div>
-                <strong>Medical records</strong>
-                <span>Keep your health history organized</span>
-                <ArrowRight size={17} className="shortcut-arrow" />
-              </Link>
-
-              <Link to="/patient/skin-health" className="patient-shortcut-card">
-                <div className="shortcut-icon violet">
-                  <ScanFace size={20} />
-                </div>
-                <strong>Skin health AI</strong>
-                <span>Explore the skin assessment feature</span>
-                <ArrowRight size={17} className="shortcut-arrow" />
-              </Link>
-
-              <Link to="/patient/consent" className="patient-shortcut-card">
-                <div className="shortcut-icon green">
-                  <ShieldCheck size={20} />
-                </div>
-                <strong>Privacy controls</strong>
-                <span>Manage doctor access permissions</span>
-                <ArrowRight size={17} className="shortcut-arrow" />
-              </Link>
-            </div>
-          </div>
-
-          <aside className="patient-section-column patient-side-column">
-            <div className="patient-section-heading">
-              <div>
-                <span className="patient-section-kicker">HEALTH JOURNAL</span>
-                <h2>Recent activity</h2>
               </div>
-              <Activity size={19} className="activity-heading-icon" />
-            </div>
+            ) : upcomingAppointment ? (
+              <div className="patient-appt-body-wrap">
+                <div className="patient-appt-surface">
+                  <div className="patient-appt-main-grid">
+                    <div className="patient-doctor-block">
+                      <div className="patient-doctor-avatar" aria-hidden="true">
+                        <span className="patient-doctor-initials">
+                          {extractDoctorInitials(upcomingDoctor?.full_name)}
+                        </span>
+                        <span className="patient-doctor-emblem">
+                          <Stethoscope size={13} />
+                        </span>
+                      </div>
 
-            <article className="recent-activity-card">
-              <div className="activity-timeline">
-                {loading ? (
-                  <div className="activity-item">
-                    <div className="activity-copy">
-                      <strong>Loading recent activity...</strong>
-                      <p>Retrieving your health history.</p>
-                    </div>
-                  </div>
-                ) : loadError ? (
-                  <div className="activity-item">
-                    <div className="activity-copy">
-                      <strong>Activity unavailable</strong>
-                      <p>Some information could not be retrieved.</p>
-                    </div>
-                  </div>
-                ) : activities.length > 0 ? (
-                  activities.map((activity, index) => {
-                    const Icon = activity.icon;
-
-                    return (
-                      <div className="activity-item" key={activity.id}>
-                        <div className={`activity-icon ${activity.tone}`}>
-                          <Icon size={17} />
-                        </div>
-                        <div className="activity-copy">
-                          <strong>{activity.title}</strong>
-                          <p>{activity.description}</p>
-                          <small>{activity.date}</small>
-                        </div>
-                        {index !== activities.length - 1 && (
-                          <span className="activity-connector" />
+                      <div className="patient-doctor-meta">
+                        <p className="patient-appointment-clinician">
+                          {upcomingDoctor
+                            ? formatDoctorDisplayName(upcomingDoctor.full_name)
+                            : "Scheduled clinical consultation"}
+                        </p>
+                        <p className="patient-appointment-specialty">
+                          {upcomingDoctor?.specialization
+                            ? upcomingDoctor.specialization
+                            : "Outpatient appointment"}
+                        </p>
+                        {upcomingDoctor?.clinic_name && (
+                          <p className="patient-appointment-clinic">
+                            <MapPin
+                              size={15}
+                              className="patient-clinic-pin"
+                              aria-hidden="true"
+                            />
+                            <span>{upcomingDoctor.clinic_name}</span>
+                          </p>
                         )}
                       </div>
-                    );
-                  })
-                ) : (
-                  <div className="activity-item">
-                    <div className="activity-copy">
-                      <strong>No recent activity yet</strong>
-                      <p>
-                        Your consultation records and prescriptions will appear
-                        here when available.
-                      </p>
                     </div>
+
+                    <div
+                      className="patient-appt-divider"
+                      aria-hidden="true"
+                    />
+
+                    <dl className="patient-appt-schedule">
+                      <div className="patient-schedule-cell">
+                        <dt className="patient-schedule-icon">
+                          <Calendar size={19} aria-label="Appointment date" />
+                        </dt>
+                        <dd className="patient-schedule-primary">
+                          {formatReadableDate(
+                            upcomingAppointment.appointment_date,
+                          )}
+                        </dd>
+                        {upcomingWeekday && (
+                          <dd className="patient-schedule-sub">
+                            ({upcomingWeekday})
+                          </dd>
+                        )}
+                      </div>
+
+                      <div className="patient-schedule-cell">
+                        <dt className="patient-schedule-icon">
+                          <Clock size={19} aria-label="Appointment time IST" />
+                        </dt>
+                        <dd className="patient-schedule-primary">
+                          {formatAppointmentTime(
+                            upcomingAppointment.start_time,
+                          )}
+                          {upcomingAppointment.end_time
+                            ? ` – ${formatAppointmentTime(upcomingAppointment.end_time)}`
+                            : ""}
+                        </dd>
+                        <dd className="patient-schedule-sub">IST</dd>
+                      </div>
+                    </dl>
                   </div>
+                </div>
+
+                <div className="patient-appt-footer">
+                  {isPlainSafeText(upcomingAppointment.reason) ? (
+                    <p className="patient-appointment-reason">
+                      <span className="patient-reason-label">Visit focus:</span>{" "}
+                      <span>{upcomingAppointment.reason}</span>
+                    </p>
+                  ) : (
+                    <span className="patient-reason-placeholder">
+                      Outpatient consultation scheduled
+                    </span>
+                  )}
+                  <Link to="/patient/appointments" className="patient-appt-cta">
+                    <span>View appointments</span>
+                    <ArrowRight size={16} aria-hidden="true" />
+                  </Link>
+                </div>
+              </div>
+            ) : (
+              <div className="patient-appt-body-wrap">
+                <div className="patient-appt-surface patient-appt-surface--state">
+                  <div className="patient-state-panel">
+                    <h3 className="patient-state-title">
+                      {partialAppointments
+                        ? "Next appointment could not be verified"
+                        : "No upcoming appointments scheduled"}
+                    </h3>
+                    <p className="patient-state-description">
+                      {partialAppointments
+                        ? "Part of your schedule could not be verified. Retry loading or open Appointments to check your complete booking list."
+                        : "When you book an outpatient visit, your clinician details, appointment time, and clinic location will appear here."}
+                    </p>
+                  </div>
+                </div>
+                <div className="patient-appt-footer">
+                  <Link
+                    to="/patient/appointments"
+                    className="patient-btn-secondary"
+                  >
+                    <span>View appointments</span>
+                    <ArrowRight size={16} aria-hidden="true" />
+                  </Link>
+                  <Link to="/patient/doctors" className="patient-appt-cta">
+                    <CalendarPlus size={16} aria-hidden="true" />
+                    <span>Find a doctor</span>
+                  </Link>
+                </div>
+              </div>
+            )}
+          </section>
+
+          <section
+            className="patient-card patient-actions-card"
+            aria-labelledby="quick-actions-heading"
+          >
+            <div className="patient-card-header">
+              <h2 id="quick-actions-heading" className="patient-card-title">
+                Quick actions
+              </h2>
+            </div>
+            <ul className="patient-actions-list">
+              <li>
+                <Link to="/patient/doctors" className="patient-action-item">
+                  <span className="patient-action-tile" aria-hidden="true">
+                    <Stethoscope size={20} />
+                  </span>
+                  <span className="patient-action-copy">
+                    <span className="patient-action-title">Find a doctor</span>
+                    <span className="patient-action-desc">
+                      Browse clinicians and book a visit
+                    </span>
+                  </span>
+                  <ArrowRight
+                    size={17}
+                    className="patient-row-arrow"
+                    aria-hidden="true"
+                  />
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/patient/appointments"
+                  className="patient-action-item"
+                >
+                  <span className="patient-action-tile" aria-hidden="true">
+                    <Calendar size={20} />
+                  </span>
+                  <span className="patient-action-copy">
+                    <span className="patient-action-title">My appointments</span>
+                    <span className="patient-action-desc">
+                      View and manage your visits
+                    </span>
+                  </span>
+                  <ArrowRight
+                    size={17}
+                    className="patient-row-arrow"
+                    aria-hidden="true"
+                  />
+                </Link>
+              </li>
+              <li>
+                <Link to="/patient/records" className="patient-action-item">
+                  <span className="patient-action-tile" aria-hidden="true">
+                    <FolderOpen size={20} />
+                  </span>
+                  <span className="patient-action-copy">
+                    <span className="patient-action-title">Health records</span>
+                    <span className="patient-action-desc">
+                      Access your consultation records
+                    </span>
+                  </span>
+                  <ArrowRight
+                    size={17}
+                    className="patient-row-arrow"
+                    aria-hidden="true"
+                  />
+                </Link>
+              </li>
+              <li>
+                <Link
+                  to="/patient/skin-health"
+                  className="patient-action-item"
+                >
+                  <span className="patient-action-tile" aria-hidden="true">
+                    <Scan size={20} />
+                  </span>
+                  <span className="patient-action-copy">
+                    <span className="patient-action-title">Skin screening</span>
+                    <span className="patient-action-desc">
+                      Submit a skin image for review
+                    </span>
+                  </span>
+                  <ArrowRight
+                    size={17}
+                    className="patient-row-arrow"
+                    aria-hidden="true"
+                  />
+                </Link>
+              </li>
+            </ul>
+          </section>
+
+          <section
+            className="patient-card patient-care-card"
+            aria-labelledby="recent-care-heading"
+          >
+            <div className="patient-card-header patient-card-header--care">
+              <div className="patient-care-title-wrap">
+                <Clock
+                  size={18}
+                  className="patient-card-icon"
+                  aria-hidden="true"
+                />
+                <div>
+                  <h2 id="recent-care-heading" className="patient-card-title">
+                    Recent care
+                  </h2>
+                  <p className="patient-card-subtitle">
+                    Your latest visits and prescriptions
+                  </p>
+                </div>
+              </div>
+              <div
+                className="patient-care-counts"
+                aria-label="Care summary counts"
+              >
+                <span className="patient-count-chip">
+                  Records:{" "}
+                  <strong>
+                    {recordsError
+                      ? "Unavailable"
+                      : recordTotal !== null
+                        ? recordTotal
+                        : "—"}
+                  </strong>
+                </span>
+                <span className="patient-count-chip">
+                  Prescriptions:{" "}
+                  <strong>
+                    {prescriptionsError
+                      ? "Unavailable"
+                      : prescriptionTotal !== null
+                        ? prescriptionTotal
+                        : "—"}
+                  </strong>
+                </span>
+              </div>
+            </div>
+
+            {loading && recentCareItems.length === 0 ? (
+              <div className="patient-skeleton-block" aria-busy="true">
+                <div className="patient-skeleton patient-skeleton--line" />
+                <div className="patient-skeleton patient-skeleton--line" />
+              </div>
+            ) : recentCareItems.length > 0 ? (
+              <ul className="patient-timeline-list">
+                {recentCareItems.map((item) => (
+                  <li key={item.id} className="patient-timeline-item">
+                    <span className="patient-timeline-rail" aria-hidden="true">
+                      <span className="patient-timeline-dot" />
+                    </span>
+                    <Link to={item.to} className="patient-timeline-link">
+                      <span
+                        className={`patient-care-badge patient-care-badge--${item.kind}`}
+                        aria-hidden="true"
+                      >
+                        {item.kind === "record" ? (
+                          <FileText size={16} />
+                        ) : (
+                          <Pill size={16} />
+                        )}
+                      </span>
+                      <span className="patient-care-copy">
+                        <span className="patient-care-title">{item.title}</span>
+                        <span className="patient-care-meta">
+                          {item.dateLabel}
+                          <span aria-hidden="true"> · </span>
+                          {item.subtitle}
+                        </span>
+                      </span>
+                      <ArrowRight
+                        size={16}
+                        className="patient-row-arrow"
+                        aria-hidden="true"
+                      />
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className="patient-state-panel patient-state-panel--compact">
+                <h3 className="patient-state-title">
+                  {activityErrors.length > 0
+                    ? "Recent care history temporarily unavailable"
+                    : "No consultation records on file yet"}
+                </h3>
+                <p className="patient-state-description">
+                  {activityErrors.length > 0
+                    ? "Retry loading or open your records and prescriptions pages directly."
+                    : "Completed visit summaries and issued prescriptions will appear here without exposing clinical notes on the overview."}
+                </p>
+              </div>
+            )}
+
+            <div className="patient-care-footer">
+              <Link to="/patient/records" className="patient-care-footer-link">
+                <span>All health records</span>
+                <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+              <Link
+                to="/patient/prescriptions"
+                className="patient-care-footer-link"
+              >
+                <span>All prescriptions</span>
+                <ArrowRight size={15} aria-hidden="true" />
+              </Link>
+            </div>
+          </section>
+
+          <section
+            className="patient-card patient-consent-card"
+            aria-labelledby="consent-privacy-heading"
+          >
+            <ConsentBotanicalAccent />
+            <div className="patient-consent-inner">
+              <div className="patient-card-header">
+                <div className="patient-card-title-group">
+                  {pendingConsentCount !== null && pendingConsentCount > 0 ? (
+                    <ShieldAlert
+                      size={18}
+                      className="patient-consent-icon patient-consent-icon--pending"
+                      aria-hidden="true"
+                    />
+                  ) : (
+                    <ShieldCheck
+                      size={18}
+                      className="patient-consent-icon"
+                      aria-hidden="true"
+                    />
+                  )}
+                  <h2
+                    id="consent-privacy-heading"
+                    className="patient-card-title"
+                  >
+                    Consent &amp; privacy
+                  </h2>
+                </div>
+                {pendingConsentCount !== null && (
+                  <span
+                    className={`patient-status-badge ${
+                      pendingConsentCount > 0
+                        ? "patient-status-badge--caution"
+                        : "patient-status-badge--neutral"
+                    }`}
+                  >
+                    {pendingConsentCount > 0
+                      ? `${pendingConsentCount} pending`
+                      : "No pending requests"}
+                  </span>
                 )}
               </div>
 
-              <Link to="/patient/records" className="activity-history-link">
-                Explore health history <ArrowRight size={15} />
-              </Link>
-            </article>
+              <p className="patient-consent-copy">
+                {pendingConsentCount !== null && pendingConsentCount > 0
+                  ? `You have ${pendingConsentCount} clinician access ${
+                      pendingConsentCount === 1 ? "request" : "requests"
+                    } awaiting review. Choose which record scopes and dates to share.`
+                  : "Clinicians can only read the health record scopes and access windows you explicitly approve."}
+              </p>
 
-            <article className="patient-wellness-card">
-              <div className="wellness-decoration">
-                <HeartPulse size={22} />
-                <Sparkles size={17} />
+              <div className="patient-card-footer">
+                <Link to="/patient/consent" className="patient-consent-btn">
+                  <span>
+                    {pendingConsentCount !== null && pendingConsentCount > 0
+                      ? "Review consent requests"
+                      : "Manage privacy controls"}
+                  </span>
+                  <ArrowRight size={16} aria-hidden="true" />
+                </Link>
               </div>
-              <span className="patient-section-kicker">
-                A GENTLER APPROACH TO CARE
-              </span>
-              <h3>Your health is more than a number.</h3>
-              <p>
-                Anvaya brings your appointments, records and care journey
-                together, so important information is easier to find.
-              </p>
-              <Link to="/patient/consent">
-                Explore privacy controls <ArrowRight size={15} />
-              </Link>
-            </article>
-
-            <div className="patient-trust-note">
-              <ShieldCheck size={17} />
-              <p>
-                Your medical information should remain private and accessible
-                only through authorized access.
-              </p>
             </div>
-          </aside>
-        </section>
-
-        <div className="patient-dashboard-bottom">
-          <div>
-            <CheckCircle2 size={16} />
-            <span>Designed around your care journey</span>
-          </div>
-          <span>ANVAYA · PATIENT EXPERIENCE</span>
+          </section>
         </div>
       </div>
     </PortalLayout>

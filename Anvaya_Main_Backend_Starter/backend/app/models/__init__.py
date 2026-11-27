@@ -12,6 +12,7 @@ from app.models.audit_log import AuditLog
 from app.models.skin_lesion_analysis import SkinLesionAnalysis
 from app.models.refresh_token import RefreshToken, RefreshTokenFamily
 from app.models.notification import Notification
+from app.models.idempotency_record import IdempotencyRecord
 
 __all__ = [
     "User",
@@ -20,6 +21,7 @@ __all__ = [
     "DoctorAvailability",
     "Appointment",
     "AppointmentRescheduleProposal",
+    "IdempotencyRecord",
     "HealthRecord",
     "ConsentRecord",
     "ConsentRequest",

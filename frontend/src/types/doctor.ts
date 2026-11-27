@@ -21,6 +21,15 @@ export interface DoctorAppointmentListResponse {
   offset: number;
 }
 
+export interface DoctorAppointmentSummaryResponse {
+  total: number;
+  today_count: number;
+  upcoming_count: number;
+  past_due_count: number;
+  completed_count: number;
+  cancelled_count: number;
+}
+
 export interface DoctorAvailabilityItem {
   id: string;
   doctor_profile_id: string;

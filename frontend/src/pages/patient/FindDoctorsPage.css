@@ -1147,3 +1147,77 @@
   }
 }
 
+.booking-weekly-schedule {
+  padding: 12px 14px;
+  border: 1px solid #d5ebe5;
+  border-radius: 12px;
+  background: #f6fcfa;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.booking-weekly-header .booking-label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.weekly-schedule-loading {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: #168b83;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.weekly-schedule-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
+  gap: 6px;
+}
+
+.weekly-schedule-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding: 6px 9px;
+  border-radius: 8px;
+  background: #ffffff;
+  border: 1px solid #d8ebe6;
+  font-size: 11px;
+  color: #183b43;
+}
+
+.weekly-schedule-item strong {
+  color: #168b83;
+  font-weight: 750;
+}
+
+.weekly-schedule-item small {
+  color: #6a8885;
+  margin-left: auto;
+}
+
+.weekly-schedule-note,
+.weekly-schedule-disclaimer {
+  margin: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: #5d7c79;
+}
+
+.booking-selection-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: #ebf9f5;
+  border: 1px solid #b8e6da;
+  color: #0e6f66;
+  font-size: 12px;
+}
+

@@ -1,4 +1,5 @@
 import api from './api';
+import { skinLesionResponse } from './skinLesionJson';
 import type {
   SkinLesionAnalysis,
   SkinLesionListResponse,
@@ -19,6 +20,7 @@ export const aiService = {
       `/ai/skin-lesion/analyze?language=${language}`,
       formData,
       {
+        ...skinLesionResponse,
         headers: {
           'Content-Type': 'multipart/form-data',
         },
@@ -29,6 +31,7 @@ export const aiService = {
 
   async getMyAnalyses(page: number = 1, pageSize: number = 20): Promise<SkinLesionListResponse> {
     const response = await api.get<SkinLesionListResponse>('/ai/skin-lesion/me', {
+      ...skinLesionResponse,
       params: { page, page_size: pageSize },
     });
     return response.data;
@@ -36,7 +39,7 @@ export const aiService = {
 
   async getPatientAnalyses(patientProfileId: string): Promise<SkinLesionListResponse> {
     const response = await api.get<SkinLesionListResponse>(
-      `/ai/skin-lesion/patient/${patientProfileId}`
+      `/ai/skin-lesion/patient/${patientProfileId}`, skinLesionResponse
     );
     return response.data;
   },
@@ -47,7 +50,7 @@ export const aiService = {
   ): Promise<SkinLesionAnalysis> {
     const response = await api.patch<SkinLesionAnalysis>(
       `/ai/skin-lesion/${analysisId}/review`,
-      payload
+      payload, skinLesionResponse
     );
     return response.data;
   },

@@ -1,0 +1,175 @@
+/* Doctor Verification Notice Styling */
+.doc-verify-notice-wrapper {
+  margin: 1.5rem 0 2rem;
+  max-width: 900px;
+}
+
+.doc-verify-notice {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.75rem 2rem;
+  border-radius: 12px;
+  border: 1.5px solid;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.04);
+}
+
+.doc-verify-notice-pending {
+  background: #fffdf5;
+  border-color: #fde68a;
+  color: #78350f;
+}
+
+.doc-verify-notice-rejected {
+  background: #fef2f2;
+  border-color: #fca5a5;
+  color: #991b1b;
+}
+
+.doc-verify-notice-suspended {
+  background: #f8fafc;
+  border-color: #cbd5e1;
+  color: #334155;
+}
+
+.doc-verify-notice-hero {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+
+.doc-verify-icon-bubble {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  border-radius: 14px;
+}
+
+.doc-verify-icon-bubble.pending {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.doc-verify-icon-bubble.rejected {
+  background: #fee2e2;
+  color: #dc2626;
+}
+
+.doc-verify-icon-bubble.suspended {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+.doc-verify-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+}
+
+.doc-verify-kicker {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: #b45309;
+}
+
+.doc-verify-kicker.rejected {
+  color: #b91c1c;
+}
+
+.doc-verify-kicker.suspended {
+  color: #64748b;
+}
+
+.doc-verify-title {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #1e293b;
+  letter-spacing: -0.015em;
+}
+
+.doc-verify-desc {
+  margin: 0.25rem 0 0;
+  font-size: 0.925rem;
+  line-height: 1.55;
+  color: #475569;
+}
+
+.doc-verify-subnote {
+  margin: 0.25rem 0 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: #64748b;
+}
+
+.doc-verify-credentials-card {
+  padding: 1.125rem 1.25rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.doc-verify-card-heading {
+  margin: 0 0 0.875rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.825rem;
+  font-weight: 700;
+  color: #334155;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.doc-verify-details-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.875rem 1.25rem;
+}
+
+.doc-verify-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.doc-verify-field-label {
+  font-size: 0.75rem;
+  color: #64748b;
+  font-weight: 500;
+}
+
+.doc-verify-field-value {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.doc-verify-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.75rem;
+  padding-top: 0.5rem;
+}
+
+@media (max-width: 640px) {
+  .doc-verify-notice {
+    padding: 1.25rem 1.25rem;
+  }
+  .doc-verify-notice-hero {
+    flex-direction: column;
+    gap: 0.875rem;
+  }
+  .doc-verify-title {
+    font-size: 1.15rem;
+  }
+}

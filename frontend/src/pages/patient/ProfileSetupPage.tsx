@@ -1,4 +1,4 @@
-﻿import { useEffect, useState, type FormEvent } from "react";
+import { useEffect, useState, type FormEvent } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
 import {
@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 
 import { useAuth } from "../../app/AuthContext";
+import { patientReadError } from "../../services/patientReliability";
 import { patientService } from "../../services/patientService";
 import type {
   PatientProfileUpdate,
@@ -51,6 +52,8 @@ export default function ProfileSetupPage() {
   const [form, setForm] = useState<ProfileForm>(emptyForm);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const [loadRevision, setLoadRevision] = useState(0);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
 
@@ -76,7 +79,7 @@ export default function ProfileSetupPage() {
         if (axios.isAxiosError(err) && err.response?.status === 404) {
           setForm(emptyForm);
         } else {
-          setError(getErrorMessage(err));
+          setLoadError(patientReadError(err, "your profile"));
         }
       } finally {
         if (active) setIsLoading(false);
@@ -88,7 +91,7 @@ export default function ProfileSetupPage() {
     return () => {
       active = false;
     };
-  }, []);
+  }, [loadRevision]);
 
   const updateField = (field: keyof ProfileForm, value: string) => {
     setForm((previous) => ({
@@ -101,6 +104,7 @@ export default function ProfileSetupPage() {
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (isLoading || loadError || isSaving) return;
     setError("");
     setSuccess(false);
     setIsSaving(true);
@@ -207,6 +211,15 @@ export default function ProfileSetupPage() {
             <div className="profile-loading">
               <div className="auth-loading-spinner" />
               <span>Loading your profile...</span>
+            </div>
+          ) : loadError ? (
+            <div className="profile-message profile-message-error" role="alert">
+              <p>{loadError}</p>
+              <button type="button" onClick={() => {
+                setLoadError("");
+                setIsLoading(true);
+                setLoadRevision((revision) => revision + 1);
+              }}>Retry profile</button>
             </div>
           ) : (
             <form className="profile-form" onSubmit={handleSubmit}>

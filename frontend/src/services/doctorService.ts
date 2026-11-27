@@ -3,6 +3,7 @@ import api from "./api";
 import type {
   DoctorAppointmentItem,
   DoctorAppointmentListResponse,
+  DoctorAppointmentSummaryResponse,
   DoctorAvailabilityListResponse,
   DoctorAvailabilityItem,
   DoctorAvailabilityCreatePayload,
@@ -31,12 +32,31 @@ import type { AvailableSlotsResponse } from "../types/patient";
 async function getDoctorAppointments(
   limit: number = 50,
   offset: number = 0,
+  params?: {
+    status?: string;
+    tab?: string;
+    appointment_date?: string;
+    search?: string;
+  },
 ): Promise<DoctorAppointmentListResponse> {
+  const queryParams: Record<string, string | number> = { limit, offset };
+  if (params?.status) queryParams.status = params.status;
+  if (params?.tab) queryParams.tab = params.tab;
+  if (params?.appointment_date) queryParams.appointment_date = params.appointment_date;
+  if (params?.search) queryParams.search = params.search;
+
   const response = await api.get<DoctorAppointmentListResponse>(
     "/appointments/doctor/me",
     {
-      params: { limit, offset },
+      params: queryParams,
     },
+  );
+  return response.data;
+}
+
+async function getDoctorAppointmentSummary(): Promise<DoctorAppointmentSummaryResponse> {
+  const response = await api.get<DoctorAppointmentSummaryResponse>(
+    "/appointments/doctor/me/summary",
   );
   return response.data;
 }
@@ -256,6 +276,7 @@ async function getDoctorAvailabilitySlots(
 
 export const doctorService = {
   getDoctorAppointments,
+  getDoctorAppointmentSummary,
   getDoctorAppointmentById,
   getDoctorAvailability,
   createDoctorAvailability,

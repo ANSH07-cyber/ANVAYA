@@ -1,10 +1,12 @@
-from datetime import datetime, timedelta, timezone
+from datetime import date, datetime, timedelta, timezone
+import hashlib
+import json
 import uuid
 from uuid import UUID
 from zoneinfo import ZoneInfo
 
-from fastapi import APIRouter, Depends, Header, HTTPException, Query, status
-from sqlalchemy import func, select, update
+from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response, status
+from sqlalchemy import case, func, or_, select, update
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
@@ -23,6 +25,7 @@ from app.models.appointment import Appointment
 from app.models.appointment_reschedule_proposal import AppointmentRescheduleProposal
 from app.models.doctor_profile import DoctorProfile
 from app.models.health_record import HealthRecord
+from app.models.idempotency_record import IdempotencyRecord
 from app.models.patient_profile import PatientProfile
 from app.models.user import User
 
@@ -34,6 +37,7 @@ from app.schemas.appointment import (
     DoctorAppointmentCancel,
     DoctorAppointmentRead,
     DoctorAppointmentListResponse,
+    DoctorAppointmentSummaryResponse,
 )
 from app.schemas.appointment_reschedule_proposal import (
     RescheduleProposalCreate,
@@ -48,10 +52,29 @@ from app.services.audit_service import add_audit_log
 from app.services.notification_service import (
     notify_appointment_booked,
     notify_appointment_cancelled,
+    notify_appointment_completed,
     notify_appointment_rescheduled,
     notify_reschedule_proposed,
     notify_reschedule_response,
 )
+
+BOOKING_IDEMPOTENCY_OPERATION = "appointments.create"
+BOOKING_IDEMPOTENCY_TTL = timedelta(hours=24)
+
+
+def _compute_booking_request_hash(payload: AppointmentCreate) -> str:
+    """Computes a canonical SHA-256 digest binding an Idempotency-Key to its booking payload."""
+    canonical = json.dumps(
+        {
+            "doctor_profile_id": str(payload.doctor_profile_id),
+            "appointment_date": payload.appointment_date.isoformat(),
+            "start_time": payload.start_time.strftime("%H:%M:%S"),
+            "reason": payload.reason,
+        },
+        sort_keys=True,
+        separators=(",", ":"),
+    )
+    return hashlib.sha256(canonical.encode("utf-8")).hexdigest()
 
 
 IST = ZoneInfo("Asia/Kolkata")
@@ -159,9 +182,23 @@ router = APIRouter(
 )
 def create_appointment(
     payload: AppointmentCreate,
+    response: Response,
     current_user: User = Depends(require_roles("patient")),
     db: Session = Depends(get_db),
+    _csrf: None = Depends(verify_csrf_and_origin),
+    x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),
+    idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
 ) -> AppointmentRead:
+
+    effective_idempotency_key = (
+        payload.idempotency_key or x_idempotency_key or idempotency_key or ""
+    ).strip() or None
+
+    if effective_idempotency_key and len(effective_idempotency_key) > 255:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Idempotency key cannot exceed 255 characters.",
+        )
 
     if (
         payload.start_time.tzinfo is not None
@@ -183,6 +220,34 @@ def create_appointment(
             status_code=404,
             detail="Patient profile not found.",
         )
+
+    now_utc = datetime.now(timezone.utc)
+    request_hash = _compute_booking_request_hash(payload)
+
+    if effective_idempotency_key:
+        existing_idempotency = db.scalar(
+            select(IdempotencyRecord)
+            .where(
+                IdempotencyRecord.patient_profile_id == patient_profile.id,
+                IdempotencyRecord.operation == BOOKING_IDEMPOTENCY_OPERATION,
+                IdempotencyRecord.idempotency_key == effective_idempotency_key,
+            )
+            .with_for_update()
+        )
+        if existing_idempotency is not None:
+            if _to_utc(existing_idempotency.expires_at) > now_utc:
+                if existing_idempotency.request_hash != request_hash:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Idempotency-Key was already used with a different booking payload.",
+                    )
+                existing_appointment = db.get(Appointment, existing_idempotency.appointment_id)
+                if existing_appointment is not None:
+                    response.status_code = status.HTTP_200_OK
+                    return existing_appointment
+            else:
+                db.delete(existing_idempotency)
+                db.flush()
 
     doctor_profile = db.scalar(
         select(DoctorProfile)
@@ -245,12 +310,29 @@ def create_appointment(
         start_time=selected_slot.start_time,
         end_time=selected_slot.end_time,
         status="booked",
+        last_idempotency_key=effective_idempotency_key,
         reason=payload.reason,
     )
 
     try:
         db.add(appointment)
         db.flush()
+
+        if effective_idempotency_key:
+            db.add(
+                IdempotencyRecord(
+                    patient_profile_id=patient_profile.id,
+                    operation=BOOKING_IDEMPOTENCY_OPERATION,
+                    idempotency_key=effective_idempotency_key,
+                    request_hash=request_hash,
+                    appointment_id=appointment.id,
+                    created_at=now_utc,
+                    expires_at=now_utc + BOOKING_IDEMPOTENCY_TTL,
+                )
+            )
+            # Flush IdempotencyRecord before SAVEPOINT notification writes so unique-key collisions
+            # trigger cleanly in the outer transaction rather than inside begin_nested().
+            db.flush()
 
         doctor_user = db.get(User, doctor_profile.user_id)
         notify_appointment_booked(
@@ -263,15 +345,55 @@ def create_appointment(
             doctor_name=doctor_user.full_name if doctor_user else None,
         )
 
+        add_audit_log(
+            db,
+            actor_user_id=current_user.id,
+            patient_profile_id=patient_profile.id,
+            doctor_profile_id=doctor_profile.id,
+            event_type="appointment.created",
+            resource_type="appointment",
+            resource_id=appointment.id,
+            outcome="success",
+            details={
+                "action": "patient_booking",
+                "appointment_date": str(appointment.appointment_date),
+                "start_time": str(appointment.start_time),
+                "end_time": str(appointment.end_time),
+                "revision": appointment.revision,
+                "reason_provided": bool(appointment.reason),
+            },
+        )
+
         db.commit()
         db.refresh(appointment)
 
     except IntegrityError:
         db.rollback()
+        if effective_idempotency_key:
+            raced = db.scalar(
+                select(IdempotencyRecord).where(
+                    IdempotencyRecord.patient_profile_id == patient_profile.id,
+                    IdempotencyRecord.operation == BOOKING_IDEMPOTENCY_OPERATION,
+                    IdempotencyRecord.idempotency_key == effective_idempotency_key,
+                )
+            )
+            if raced is not None and _to_utc(raced.expires_at) > now_utc:
+                if raced.request_hash != request_hash:
+                    raise HTTPException(
+                        status_code=status.HTTP_409_CONFLICT,
+                        detail="Idempotency-Key was already used with a different booking payload.",
+                    )
+                existing_appointment = db.get(Appointment, raced.appointment_id)
+                if existing_appointment is not None:
+                    response.status_code = status.HTTP_200_OK
+                    return existing_appointment
         raise HTTPException(
             status_code=409,
             detail="Appointment could not be created.",
         )
+    except Exception:
+        db.rollback()
+        raise
 
     return appointment
 
@@ -309,8 +431,15 @@ def get_my_appointments(
         )
     ) or 0
 
-    appointments = db.scalars(
-        select(Appointment)
+    rows = db.execute(
+        select(
+            Appointment,
+            User.full_name,
+            DoctorProfile.specialization,
+            DoctorProfile.clinic_name,
+        )
+        .outerjoin(DoctorProfile, DoctorProfile.id == Appointment.doctor_profile_id)
+        .outerjoin(User, User.id == DoctorProfile.user_id)
         .where(
             Appointment.patient_profile_id == patient_profile.id
         )
@@ -333,10 +462,13 @@ def get_my_appointments(
             status=appt.status,
             reason=sanitize_patient_appointment_reason(appt.reason),
             revision=appt.revision,
+            doctor_name=doc_name,
+            doctor_specialization=doc_spec,
+            doctor_clinic_name=doc_clinic,
             created_at=appt.created_at,
             updated_at=appt.updated_at,
         )
-        for appt in appointments
+        for appt, doc_name, doc_spec, doc_clinic in rows
     ]
 
     return AppointmentListResponse(
@@ -348,8 +480,100 @@ def get_my_appointments(
 
 
 # =========================================================
-# 3. GET MY APPOINTMENTS - DOCTOR
+# 3. GET MY APPOINTMENTS & SUMMARY - DOCTOR
 # =========================================================
+
+@router.get(
+    "/doctor/me/summary",
+    response_model=DoctorAppointmentSummaryResponse,
+)
+def get_doctor_appointment_summary(
+    current_user: User = Depends(require_roles("doctor")),
+    db: Session = Depends(get_db),
+) -> DoctorAppointmentSummaryResponse:
+    doctor_profile = db.scalar(
+        select(DoctorProfile).where(
+            DoctorProfile.user_id == current_user.id
+        )
+    )
+
+    if doctor_profile is None:
+        raise HTTPException(
+            status_code=404,
+            detail="Doctor profile not found.",
+        )
+
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="Inactive accounts cannot access clinical appointments.",
+        )
+
+    if doctor_profile.verification_status != "approved":
+        raise HTTPException(
+            status_code=403,
+            detail="Only approved doctors can view appointments.",
+        )
+
+    today_ist = datetime.now(IST).date()
+
+    stmt = select(
+        func.count(Appointment.id).label("total"),
+        func.count(
+            case(
+                (
+                    (Appointment.status == "booked") & (Appointment.appointment_date == today_ist),
+                    Appointment.id,
+                )
+            )
+        ).label("today_count"),
+        func.count(
+            case(
+                (
+                    (Appointment.status == "booked") & (Appointment.appointment_date > today_ist),
+                    Appointment.id,
+                )
+            )
+        ).label("upcoming_count"),
+        func.count(
+            case(
+                (
+                    (Appointment.status == "booked") & (Appointment.appointment_date < today_ist),
+                    Appointment.id,
+                )
+            )
+        ).label("past_due_count"),
+        func.count(
+            case(
+                (
+                    Appointment.status == "completed",
+                    Appointment.id,
+                )
+            )
+        ).label("completed_count"),
+        func.count(
+            case(
+                (
+                    Appointment.status == "cancelled",
+                    Appointment.id,
+                )
+            )
+        ).label("cancelled_count"),
+    ).where(
+        Appointment.doctor_profile_id == doctor_profile.id
+    )
+
+    row = db.execute(stmt).one()
+
+    return DoctorAppointmentSummaryResponse(
+        total=row.total or 0,
+        today_count=row.today_count or 0,
+        upcoming_count=row.upcoming_count or 0,
+        past_due_count=row.past_due_count or 0,
+        completed_count=row.completed_count or 0,
+        cancelled_count=row.cancelled_count or 0,
+    )
+
 
 @router.get(
     "/doctor/me",
@@ -358,6 +582,10 @@ def get_my_appointments(
 def get_doctor_appointments(
     limit: int = Query(default=20, ge=1, le=100),
     offset: int = Query(default=0, ge=0),
+    status: str | None = Query(default=None),
+    tab: str | None = Query(default=None),
+    appointment_date: date | None = Query(default=None),
+    search: str | None = Query(default=None),
     current_user: User = Depends(require_roles("doctor")),
     db: Session = Depends(get_db),
 ) -> DoctorAppointmentListResponse:
@@ -374,10 +602,62 @@ def get_doctor_appointments(
             detail="Doctor profile not found.",
         )
 
-    total = db.scalar(
-        select(func.count(Appointment.id)).where(
-            Appointment.doctor_profile_id == doctor_profile.id
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=403,
+            detail="Inactive accounts cannot access clinical appointments.",
         )
+
+    if doctor_profile.verification_status != "approved":
+        raise HTTPException(
+            status_code=403,
+            detail="Only approved doctors can view appointments.",
+        )
+
+    today_ist = datetime.now(IST).date()
+
+    query_filter = [Appointment.doctor_profile_id == doctor_profile.id]
+
+    if status:
+        query_filter.append(Appointment.status == status)
+
+    if tab == "today":
+        query_filter.append(Appointment.status == "booked")
+        query_filter.append(Appointment.appointment_date == today_ist)
+    elif tab == "upcoming":
+        query_filter.append(Appointment.status == "booked")
+        query_filter.append(Appointment.appointment_date > today_ist)
+    elif tab == "past_due":
+        query_filter.append(Appointment.status == "booked")
+        query_filter.append(Appointment.appointment_date < today_ist)
+    elif tab == "completed":
+        query_filter.append(Appointment.status == "completed")
+    elif tab == "cancelled":
+        query_filter.append(Appointment.status == "cancelled")
+
+    if appointment_date:
+        query_filter.append(Appointment.appointment_date == appointment_date)
+
+    if search and search.strip():
+        term = f"%{search.strip()}%"
+        query_filter.append(
+            or_(
+                User.full_name.ilike(term),
+                Appointment.reason.ilike(term),
+            )
+        )
+
+    total = db.scalar(
+        select(func.count(Appointment.id))
+        .join(
+            PatientProfile,
+            PatientProfile.id == Appointment.patient_profile_id,
+        )
+        .join(
+            User,
+            User.id == PatientProfile.user_id,
+        )
+        .where(*query_filter)
     ) or 0
 
     rows = db.execute(
@@ -390,9 +670,7 @@ def get_doctor_appointments(
             User,
             User.id == PatientProfile.user_id,
         )
-        .where(
-            Appointment.doctor_profile_id == doctor_profile.id
-        )
+        .where(*query_filter)
         .order_by(
             Appointment.appointment_date.desc(),
             Appointment.start_time.desc(),
@@ -1435,12 +1713,13 @@ def cancel_my_appointment(
     appointment_id: UUID,
     current_user: User = Depends(require_roles("patient")),
     db: Session = Depends(get_db),
+    _csrf: None = Depends(verify_csrf_and_origin),
 ) -> AppointmentRead:
 
     patient_profile = db.scalar(
-        select(PatientProfile).where(
-            PatientProfile.user_id == current_user.id
-        )
+        select(PatientProfile)
+        .where(PatientProfile.user_id == current_user.id)
+        .with_for_update()
     )
 
     if patient_profile is None:
@@ -1482,6 +1761,7 @@ def cancel_my_appointment(
         )
 
     appointment.status = "cancelled"
+    appointment.revision = (appointment.revision or 0) + 1
 
     try:
         doctor_profile = db.get(DoctorProfile, appointment.doctor_profile_id)
@@ -1508,6 +1788,25 @@ def cancel_my_appointment(
             )
         )
 
+        add_audit_log(
+            db,
+            actor_user_id=current_user.id,
+            patient_profile_id=patient_profile.id,
+            doctor_profile_id=appointment.doctor_profile_id,
+            event_type="appointment.cancelled_by_patient",
+            resource_type="appointment",
+            resource_id=appointment.id,
+            outcome="success",
+            details={
+                "action": "patient_cancellation",
+                "previous_status": "booked",
+                "new_status": "cancelled",
+                "appointment_date": str(appointment.appointment_date),
+                "start_time": str(appointment.start_time),
+                "revision": appointment.revision,
+            },
+        )
+
         db.commit()
         db.refresh(appointment)
 
@@ -1517,6 +1816,9 @@ def cancel_my_appointment(
             status_code=409,
             detail="Appointment cancellation could not be completed.",
         )
+    except Exception:
+        db.rollback()
+        raise
 
     return appointment
 
@@ -1534,6 +1836,7 @@ def reschedule_my_appointment(
     payload: AppointmentReschedule,
     current_user: User = Depends(require_roles("patient")),
     db: Session = Depends(get_db),
+    _csrf: None = Depends(verify_csrf_and_origin),
     x_idempotency_key: str | None = Header(None, alias="X-Idempotency-Key"),
     idempotency_key: str | None = Header(None, alias="Idempotency-Key"),
 ) -> AppointmentRead:
@@ -1685,6 +1988,9 @@ def reschedule_my_appointment(
             detail="You already have another overlapping appointment.",
         )
 
+    previous_date = appointment.appointment_date
+    previous_start_time = appointment.start_time
+
     appointment.appointment_date = payload.appointment_date
     appointment.start_time = selected_slot.start_time
     appointment.end_time = selected_slot.end_time
@@ -1715,6 +2021,25 @@ def reschedule_my_appointment(
             )
         )
 
+        add_audit_log(
+            db,
+            actor_user_id=current_user.id,
+            patient_profile_id=patient_profile.id,
+            doctor_profile_id=doctor_profile.id,
+            event_type="appointment.rescheduled_by_patient",
+            resource_type="appointment",
+            resource_id=appointment.id,
+            outcome="success",
+            details={
+                "action": "patient_reschedule",
+                "previous_date": str(previous_date),
+                "previous_start_time": str(previous_start_time),
+                "new_date": str(appointment.appointment_date),
+                "new_start_time": str(appointment.start_time),
+                "revision": appointment.revision,
+            },
+        )
+
         db.commit()
         db.refresh(appointment)
 
@@ -1724,6 +2049,9 @@ def reschedule_my_appointment(
             status_code=409,
             detail="Appointment rescheduling could not be completed.",
         )
+    except Exception:
+        db.rollback()
+        raise
 
     return appointment
 
@@ -1741,6 +2069,7 @@ def update_appointment_status(
     payload: ConsultationCompletion,
     current_user: User = Depends(require_roles("doctor")),
     db: Session = Depends(get_db),
+    _csrf: None = Depends(verify_csrf_and_origin),
     key_registry: KeyRegistry | None = Depends(get_clinical_key_registry),
 ) -> HealthRecordRead:
 
@@ -1875,13 +2204,59 @@ def update_appointment_status(
             **payload.model_dump(),
         )
 
-    # STEP 6: Save the health record and mark the appointment completed
-    # in one transaction. Either both changes persist or neither does.
+    # STEP 6: Save the health record, mark appointment completed, supersede active
+    # reschedule proposals, notify patient, and record audit trail in one atomic transaction.
 
+    now_utc = datetime.now(timezone.utc)
     appointment.status = "completed"
-    db.add(health_record)
+    appointment.revision = (appointment.revision or 0) + 1
 
     try:
+        db.add(health_record)
+        db.flush()
+
+        # Lock and supersede any active pending reschedule proposals atomically
+        pending_proposals = db.scalars(
+            select(AppointmentRescheduleProposal)
+            .where(
+                AppointmentRescheduleProposal.appointment_id == appointment.id,
+                AppointmentRescheduleProposal.status == "pending",
+            )
+            .with_for_update()
+        ).all()
+        for prop in pending_proposals:
+            prop.status = "superseded"
+            prop.resolved_at = now_utc
+
+        patient_profile = db.get(PatientProfile, appointment.patient_profile_id)
+        if patient_profile:
+            notify_appointment_completed(
+                db,
+                appointment_id=appointment.id,
+                appointment_date=appointment.appointment_date,
+                patient_user_id=patient_profile.user_id,
+                doctor_name=current_user.full_name,
+            )
+
+        add_audit_log(
+            db,
+            actor_user_id=current_user.id,
+            patient_profile_id=appointment.patient_profile_id,
+            doctor_profile_id=doctor_profile.id,
+            event_type="appointment.completed",
+            resource_type="appointment",
+            resource_id=appointment.id,
+            outcome="success",
+            details={
+                "action": "consultation_completed",
+                "previous_status": "booked",
+                "new_status": "completed",
+                "health_record_id": str(health_record.id),
+                "superseded_proposals_count": len(pending_proposals),
+                "revision": appointment.revision,
+            },
+        )
+
         db.commit()
         db.refresh(health_record)
 
@@ -1894,6 +2269,9 @@ def update_appointment_status(
                 "could not be completed."
             ),
         )
+    except Exception:
+        db.rollback()
+        raise
 
     if mode != "disabled":
         # Map response so completing doctor receives clean plaintext, never ciphertext

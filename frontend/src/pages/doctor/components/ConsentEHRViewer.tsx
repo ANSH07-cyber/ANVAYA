@@ -161,6 +161,8 @@ export default function ConsentEHRViewer({
               <button
                 key={id}
                 type="button"
+                data-scope-id={id}
+                aria-pressed={isSelected}
                 className={`doc-ehr-scope-chip ${isSelected ? "doc-ehr-scope-chip-selected" : ""}`}
                 onClick={() => toggleScope(id)}
                 disabled={isLoading}

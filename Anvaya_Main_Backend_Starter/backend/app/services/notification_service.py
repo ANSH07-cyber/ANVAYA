@@ -434,6 +434,31 @@ def notify_appointment_rescheduled(
     return patient_notif, doctor_notif
 
 
+def notify_appointment_completed(
+    db: Session,
+    *,
+    appointment_id: UUID,
+    appointment_date,
+    patient_user_id: UUID,
+    doctor_name: str | None = None,
+) -> Notification | None:
+    """Generates a deduplicated, Zero-PHI patient notification upon consultation completion."""
+    date_str = _format_date(appointment_date)
+    doc_label = f" with Dr. {doctor_name}" if doctor_name else ""
+    return create_notification(
+        db,
+        recipient_user_id=patient_user_id,
+        notification_type="appointment.completed",
+        title="Consultation Completed",
+        message=f"Your consultation{doc_label} on {date_str} has been completed. Your visit summary is now available.",
+        related_entity_type="appointment",
+        related_entity_id=str(appointment_id),
+        safe_action_path="/patient/records",
+        idempotency_key=f"appt_completed_{appointment_id}_{patient_user_id}",
+        recipient_role="patient",
+    )
+
+
 def notify_prescription_issued(
     db: Session,
     *,
@@ -636,6 +661,27 @@ def notify_reschedule_response(
         return doctor_notif, None
 
 
+def format_practitioner_title(name: str | None, fallback: str = "Your practitioner") -> str:
+    """Idempotently formats a doctor's display name to ensure exactly one title/honorific.
+
+    Rules:
+    - If name is None, empty, or whitespace, returns fallback (default: 'Your practitioner').
+    - Trims surrounding whitespace.
+    - If the name already begins with 'Dr.', 'Dr', or 'Doctor' (case-insensitive),
+      the trimmed name is returned without prepending an additional title.
+    - Otherwise, prepends 'Dr. ' to the trimmed name.
+    """
+    if not name:
+        return fallback
+    trimmed = name.strip()
+    if not trimmed:
+        return fallback
+
+    if re.match(r"^(?:dr\.?|doctor)\s+", trimmed, flags=re.IGNORECASE):
+        return trimmed
+    return f"Dr. {trimmed}"
+
+
 def notify_consent_requested(
     db: Session,
     *,
@@ -648,7 +694,7 @@ def notify_consent_requested(
     Preserves privacy: title and message contain only practitioner identification and action request;
     zero protected health information (PHI) or requested clinical scope details are included.
     """
-    doc_label = f"Dr. {doctor_name}" if doctor_name else "Your practitioner"
+    doc_label = format_practitioner_title(doctor_name, "Your practitioner")
 
     return create_notification(
         db,

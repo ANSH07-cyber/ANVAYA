@@ -23,9 +23,29 @@ import {
 import { useAuth } from "../../app/AuthContext";
 import PortalLayout from "../../layouts/PortalLayout";
 import { patientNavigation } from "./patientNavigation";
-import api from "../../services/api";
 import { patientService } from "../../services/patientService";
+import {
+  appointmentInstant,
+  classifyBookingFailure,
+  clinicDateAfter,
+  createIdempotencyManager,
+  createSlotRequests,
+  filterUpcomingSlots,
+  formatAppointmentTime,
+  formatClinicDate,
+  formatWeeklyScheduleSummary,
+  isUpcomingAppointment as isUpcoming,
+  isUpcomingSlot,
+  resolveAppointmentDoctorMeta,
+  scanPatientPages,
+  validBookingDate,
+  type WeeklyScheduleEntry,
+} from "../../services/patientReliability";
+import { useDialogFocusTrap } from "./useDialogFocusTrap";
+import PatientHistoryControls from "./PatientHistoryControls";
+import { usePatientHistoryPage } from "./usePatientHistoryPage";
 import type {
+  ApprovedDoctorSummary,
   AvailableSlot,
   PatientAppointment,
   AppointmentRescheduleProposal,
@@ -34,56 +54,12 @@ import "./AppointmentsPage.css";
 
 type FilterStatus = "all" | "upcoming" | "completed" | "cancelled";
 
-interface DoctorMeta {
-  id: string;
-  full_name: string;
-  specialization: string;
-  qualification?: string;
-  clinic_name?: string | null;
-  consultation_fee?: string | null;
-}
+type DoctorMeta = Pick<
+  ApprovedDoctorSummary,
+  "id" | "full_name" | "specialization" | "qualification" | "clinic_name" | "consultation_fee"
+>;
 
-interface DoctorListResponse {
-  items: DoctorMeta[];
-  total: number;
-}
-
-function getAppointmentDateTime(appointment: PatientAppointment): Date {
-  return new Date(`${appointment.appointment_date}T${appointment.start_time}`);
-}
-
-function formatDate(value: string): string {
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
-
-  return new Intl.DateTimeFormat("en-IN", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(date);
-}
-
-function formatTime(value: string): string {
-  const [hours, minutes] = value.split(":").map(Number);
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) return value;
-
-  const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
-
-  return new Intl.DateTimeFormat("en-IN", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).format(date);
-}
-
-function isUpcoming(appointment: PatientAppointment): boolean {
-  return (
-    appointment.status === "booked" &&
-    getAppointmentDateTime(appointment) > new Date()
-  );
-}
+const formatDate = formatClinicDate;
 
 function getStatusLabel(appointment: PatientAppointment): string {
   if (appointment.status === "completed") return "Completed";
@@ -91,23 +67,8 @@ function getStatusLabel(appointment: PatientAppointment): string {
   return isUpcoming(appointment) ? "Upcoming" : "Past appointment";
 }
 
-function getTomorrowString(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function getMaxDateString(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 60);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
+const getTodayString = () => clinicDateAfter(0);
+const getMaxDateString = () => clinicDateAfter(60);
 
 function extractErrorMessage(error: unknown, defaultMessage: string): string {
   if (axios.isAxiosError(error)) {
@@ -160,10 +121,9 @@ export default function AppointmentsPage() {
   const { user } = useAuth();
   const displayName = user?.full_name?.trim() || "Patient";
 
-  const [appointments, setAppointments] = useState<PatientAppointment[]>([]);
+  const history = usePatientHistoryPage(user?.id, patientService.getMyAppointments, "your appointments");
+  const { items: appointments, loading, error, reload } = history;
   const [doctorsMap, setDoctorsMap] = useState<Record<string, DoctorMeta>>({});
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
   const [filter, setFilter] = useState<FilterStatus>("all");
   const [search, setSearch] = useState("");
 
@@ -178,24 +138,30 @@ export default function AppointmentsPage() {
   const [respondingProposalId, setRespondingProposalId] = useState<string | null>(null);
   const [proposalResponseError, setProposalResponseError] = useState<string | null>(null);
   const acceptModalRef = useRef<HTMLDivElement>(null);
-  const previousActiveElementRef = useRef<HTMLElement | null>(null);
 
   // Cancellation dialog state
   const [cancellingAppointment, setCancellingAppointment] =
     useState<PatientAppointment | null>(null);
   const [isCancelling, setIsCancelling] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
+  const cancelModalRef = useRef<HTMLDivElement>(null);
 
   // Rescheduling modal state
   const [reschedulingAppointment, setReschedulingAppointment] =
     useState<PatientAppointment | null>(null);
-  const [rescheduleDate, setRescheduleDate] = useState<string>(getTomorrowString());
+  const [rescheduleDate, setRescheduleDate] = useState<string>(getTodayString());
+  const [rescheduleWeeklySchedule, setRescheduleWeeklySchedule] = useState<WeeklyScheduleEntry[]>([]);
+  const [loadingRescheduleSchedule, setLoadingRescheduleSchedule] = useState(false);
+  const [rescheduleScheduleNote, setRescheduleScheduleNote] = useState<string | null>(null);
   const [rescheduleSlots, setRescheduleSlots] = useState<AvailableSlot[]>([]);
   const [selectedSlot, setSelectedSlot] = useState<AvailableSlot | null>(null);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slotsError, setSlotsError] = useState<string | null>(null);
   const [isRescheduling, setIsRescheduling] = useState(false);
   const [rescheduleError, setRescheduleError] = useState<string | null>(null);
+  const rescheduleModalRef = useRef<HTMLDivElement>(null);
+  const rescheduleScheduleReqRef = useRef<AbortController | null>(null);
+  const rescheduleIdempotency = useRef(createIdempotencyManager());
 
   // Auto-dismiss success alert
   useEffect(() => {
@@ -206,91 +172,27 @@ export default function AppointmentsPage() {
     return () => clearTimeout(timer);
   }, [actionSuccess]);
 
-  // Load appointments, proposals and doctor directory on mount
+  // Metadata is optional for rendering appointment history. Keep its paginated refresh independent.
+  const [metadataRevision, setMetadataRevision] = useState(0);
   useEffect(() => {
-    let active = true;
-
-    async function initialFetch() {
-      try {
-        const [apptRes, docsRes, proposalsRes] = await Promise.all([
-          patientService.getMyAppointments(),
-          api.get<DoctorListResponse>("/doctors").catch(() => null),
-          patientService.getMyPendingProposals().catch(() => null),
-        ]);
-
-        if (active) {
-          setAppointments(apptRes.items);
-          if (proposalsRes?.items) {
-            setPendingProposals(proposalsRes.items);
-          }
-          if (docsRes?.data?.items) {
-            const mapping: Record<string, DoctorMeta> = {};
-            for (const doc of docsRes.data.items) {
-              mapping[doc.id] = doc;
-            }
-            setDoctorsMap(mapping);
-          }
-        }
-      } catch (err) {
-        if (active) {
-          setError(
-            extractErrorMessage(
-              err,
-              "We couldn't load your appointments. Please try again.",
-            ),
-          );
-        }
-      } finally {
-        if (active) {
-          setLoading(false);
-        }
+    const controller = new AbortController();
+    void Promise.all([
+      scanPatientPages(patientService.getApprovedDoctorsDirectory, controller.signal).catch(() => null),
+      patientService.getMyPendingProposals().catch(() => null),
+    ]).then(([docsResult, proposalsRes]) => {
+      if (controller.signal.aborted) return;
+      setPendingProposals(proposalsRes?.items ?? []);
+      if (docsResult) {
+        setDoctorsMap(Object.fromEntries(docsResult.items.map((doctor) => [doctor.id, doctor])));
       }
-    }
+    });
+    return () => controller.abort();
+  }, [metadataRevision, user?.id]);
 
-    void initialFetch();
-
-    return () => {
-      active = false;
-    };
-  }, []);
-
-  // Reload appointments after user actions or retry
-  const refreshAppointments = useCallback(async () => {
-    setLoading(true);
-    setError("");
-
-    try {
-      const [apptRes, docsRes, proposalsRes] = await Promise.all([
-        patientService.getMyAppointments(),
-        api.get<DoctorListResponse>("/doctors").catch(() => null),
-        patientService.getMyPendingProposals().catch(() => null),
-      ]);
-
-      setAppointments(apptRes.items);
-      if (proposalsRes?.items) {
-        setPendingProposals(proposalsRes.items);
-      } else {
-        setPendingProposals([]);
-      }
-
-      if (docsRes?.data?.items) {
-        const mapping: Record<string, DoctorMeta> = {};
-        for (const doc of docsRes.data.items) {
-          mapping[doc.id] = doc;
-        }
-        setDoctorsMap(mapping);
-      }
-    } catch (err) {
-      setError(
-        extractErrorMessage(
-          err,
-          "We couldn't load your appointments. Please try again.",
-        ),
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, []);
+  function refreshAppointments() {
+    reload();
+    setMetadataRevision((value) => value + 1);
+  }
 
   const handleConfirmAcceptProposal = async () => {
     if (!acceptingProposal || isRespondingProposal) return;
@@ -308,7 +210,7 @@ export default function AppointmentsPage() {
       );
       setAcceptingProposal(null);
       setActionSuccess(
-        `Consultation successfully rescheduled to ${formatDate(updated.proposed_date)} at ${formatTime(updated.proposed_start_time)}!`,
+        `Consultation successfully rescheduled to ${formatDate(updated.proposed_date)} at ${formatAppointmentTime(updated.proposed_start_time)}!`,
       );
       void refreshAppointments();
     } catch (err) {
@@ -341,7 +243,7 @@ export default function AppointmentsPage() {
         },
       );
       setActionSuccess(
-        `Reschedule proposal declined. Your original consultation remains scheduled for ${formatDate(proposal.current_appointment_date || "")} at ${formatTime(proposal.current_start_time || "")}.`,
+        `Reschedule proposal declined. Your original consultation remains scheduled for ${formatDate(proposal.current_appointment_date || "")} at ${formatAppointmentTime(proposal.current_start_time || "")}.`,
       );
       void refreshAppointments();
     } catch (err) {
@@ -359,56 +261,15 @@ export default function AppointmentsPage() {
     }
   };
 
-  // Focus trap, initial focus, and focus restoration for Accept Reschedule Modal
-  useEffect(() => {
-    if (!acceptingProposal) return;
+  useDialogFocusTrap(Boolean(acceptingProposal), acceptModalRef);
+  useDialogFocusTrap(Boolean(cancellingAppointment), cancelModalRef);
+  useDialogFocusTrap(Boolean(reschedulingAppointment), rescheduleModalRef);
 
-    previousActiveElementRef.current = document.activeElement as HTMLElement | null;
-
-    const focusTimer = setTimeout(() => {
-      if (acceptModalRef.current) {
-        const focusable = acceptModalRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        );
-        if (focusable.length > 0) {
-          focusable[0].focus();
-        }
-      }
-    }, 50);
-
-    const handleModalKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Tab") {
-        if (!acceptModalRef.current) return;
-        const focusable = acceptModalRef.current.querySelectorAll<HTMLElement>(
-          'button:not([disabled]), [href], input, select, textarea, [tabindex]:not([tabindex="-1"])',
-        );
-        if (focusable.length === 0) return;
-        const first = focusable[0];
-        const last = focusable[focusable.length - 1];
-
-        if (e.shiftKey) {
-          if (document.activeElement === first) {
-            e.preventDefault();
-            last.focus();
-          }
-        } else {
-          if (document.activeElement === last) {
-            e.preventDefault();
-            first.focus();
-          }
-        }
-      }
-    };
-
-    window.addEventListener("keydown", handleModalKeyDown);
-    return () => {
-      clearTimeout(focusTimer);
-      window.removeEventListener("keydown", handleModalKeyDown);
-      if (previousActiveElementRef.current) {
-        previousActiveElementRef.current.focus();
-      }
-    };
-  }, [acceptingProposal]);
+  const [rescheduleRequests] = useState(createSlotRequests);
+  useEffect(() => () => {
+    rescheduleRequests.invalidate();
+    rescheduleScheduleReqRef.current?.abort();
+  }, [rescheduleRequests]);
 
   // Keyboard accessibility: Escape closes open modal
   useEffect(() => {
@@ -423,6 +284,7 @@ export default function AppointmentsPage() {
           setCancelError(null);
         }
         if (reschedulingAppointment && !isRescheduling) {
+          rescheduleRequests.invalidate();
           setReschedulingAppointment(null);
           setRescheduleError(null);
         }
@@ -437,35 +299,63 @@ export default function AppointmentsPage() {
     reschedulingAppointment,
     isCancelling,
     isRescheduling,
+    rescheduleRequests,
   ]);
 
-  // Fetch slots for rescheduling
-  const loadSlotsForDate = useCallback(
-    async (doctorProfileId: string, dateStr: string) => {
-      setLoadingSlots(true);
-      setSlotsError(null);
-      setSelectedSlot(null);
+  const loadRescheduleWeeklySchedule = useCallback(async (doctorProfileId: string) => {
+    rescheduleScheduleReqRef.current?.abort();
+    const controller = new AbortController();
+    rescheduleScheduleReqRef.current = controller;
+    setRescheduleWeeklySchedule([]);
+    setRescheduleScheduleNote(null);
+    setLoadingRescheduleSchedule(true);
 
-      try {
-        const response = await patientService.getDoctorAvailabilitySlots(
-          doctorProfileId,
-          dateStr,
-        );
-        setRescheduleSlots(response.items || []);
-      } catch (err) {
-        setSlotsError(
-          extractErrorMessage(
-            err,
-            "Failed to load available slots for the selected date.",
-          ),
-        );
-        setRescheduleSlots([]);
-      } finally {
-        setLoadingSlots(false);
+    try {
+      const response = await patientService.getDoctorPublicAvailability(doctorProfileId, controller.signal);
+      if (rescheduleScheduleReqRef.current !== controller || controller.signal.aborted) return;
+      setRescheduleWeeklySchedule(formatWeeklyScheduleSummary(response.items));
+    } catch (err) {
+      if (rescheduleScheduleReqRef.current !== controller || controller.signal.aborted) return;
+      setRescheduleScheduleNote(
+        axios.isAxiosError(err) && err.response?.status === 404
+          ? "This practitioner is not currently accepting public schedule changes."
+          : "Recurring weekly hours could not be loaded.",
+      );
+    } finally {
+      if (rescheduleScheduleReqRef.current === controller) {
+        setLoadingRescheduleSchedule(false);
       }
-    },
-    [],
-  );
+    }
+  }, []);
+
+  const loadSlotsForDate = useCallback(async (doctorProfileId: string, date: string) => {
+    const request = rescheduleRequests.begin(doctorProfileId, date);
+    setRescheduleSlots([]);
+    setSelectedSlot(null);
+    setSlotsError(null);
+    if (!validBookingDate(date)) {
+      setLoadingSlots(false);
+      setSlotsError("Choose today or a date within the next 60 days (Asia/Kolkata).");
+      return;
+    }
+
+    setLoadingSlots(true);
+    try {
+      const response = await patientService.getDoctorAvailabilitySlots(doctorProfileId, date, request.signal);
+      if (!request.isCurrent()) return;
+      if (!request.matches(response)) {
+        setSlotsError("The response did not match the selected date and doctor. Refresh availability.");
+        return;
+      }
+      setRescheduleSlots(filterUpcomingSlots(date, response.items));
+    } catch (error) {
+      if (request.isCurrent()) {
+        setSlotsError(extractErrorMessage(error, "Failed to load available slots for the selected date."));
+      }
+    } finally {
+      if (request.isCurrent()) setLoadingSlots(false);
+    }
+  }, [rescheduleRequests]);
 
   // Trigger cancellation modal
   const handleOpenCancel = (appointment: PatientAppointment) => {
@@ -493,9 +383,7 @@ export default function AppointmentsPage() {
       );
 
       // Update state locally & refresh
-      setAppointments((prev) =>
-        prev.map((item) => (item.id === updated.id ? updated : item)),
-      );
+      history.updateItem(updated);
 
       setActionSuccess(
         `Consultation appointment for ${formatDate(
@@ -520,24 +408,33 @@ export default function AppointmentsPage() {
   const handleOpenReschedule = (appointment: PatientAppointment) => {
     if (!isUpcoming(appointment)) return;
 
-    const defaultDate = getTomorrowString();
+    const defaultDate = getTodayString();
+    rescheduleIdempotency.current.clear();
     setReschedulingAppointment(appointment);
     setRescheduleDate(defaultDate);
     setRescheduleError(null);
     setSelectedSlot(null);
 
+    void loadRescheduleWeeklySchedule(appointment.doctor_profile_id);
     void loadSlotsForDate(appointment.doctor_profile_id, defaultDate);
   };
 
   const handleCloseReschedule = () => {
     if (isRescheduling) return;
+    rescheduleRequests.invalidate();
+    rescheduleScheduleReqRef.current?.abort();
+    rescheduleScheduleReqRef.current = null;
+    rescheduleIdempotency.current.clear();
     setReschedulingAppointment(null);
+    setRescheduleWeeklySchedule([]);
+    setRescheduleScheduleNote(null);
     setRescheduleError(null);
     setSelectedSlot(null);
   };
 
   const handleDateChange = (newDate: string) => {
     setRescheduleDate(newDate);
+    setRescheduleError(null);
     if (reschedulingAppointment) {
       void loadSlotsForDate(
         reschedulingAppointment.doctor_profile_id,
@@ -549,7 +446,24 @@ export default function AppointmentsPage() {
   // Submit reschedule
   const handleSubmitReschedule = async (e: FormEvent) => {
     e.preventDefault();
-    if (!reschedulingAppointment || !selectedSlot || isRescheduling) return;
+    if (!reschedulingAppointment || !selectedSlot || isRescheduling || loadingSlots ||
+        !validBookingDate(rescheduleDate) ||
+        !rescheduleSlots.some((slot) => slot.start_time === selectedSlot.start_time)) return;
+
+    if (!isUpcomingSlot(rescheduleDate, selectedSlot.start_time)) {
+      setSelectedSlot(null);
+      rescheduleIdempotency.current.clear();
+      setRescheduleError("That slot has just passed in Asia/Kolkata. Please choose another available time.");
+      await loadSlotsForDate(reschedulingAppointment.doctor_profile_id, rescheduleDate);
+      return;
+    }
+
+    const fingerprint = JSON.stringify({
+      appointment_id: reschedulingAppointment.id,
+      appointment_date: rescheduleDate,
+      start_time: selectedSlot.start_time,
+    });
+    const idempotencyKey = rescheduleIdempotency.current.getKey(fingerprint);
 
     setIsRescheduling(true);
     setRescheduleError(null);
@@ -560,18 +474,18 @@ export default function AppointmentsPage() {
         {
           appointment_date: rescheduleDate,
           start_time: selectedSlot.start_time,
+          idempotency_key: idempotencyKey,
         },
       );
 
       // Update state and refresh schedule
-      setAppointments((prev) =>
-        prev.map((item) => (item.id === updated.id ? updated : item)),
-      );
+      rescheduleIdempotency.current.clear();
+      refreshAppointments();
 
       setActionSuccess(
         `Appointment rescheduled successfully for ${formatDate(
           updated.appointment_date,
-        )} at ${formatTime(updated.start_time)} – ${formatTime(
+        )} at ${formatAppointmentTime(updated.start_time)} – ${formatAppointmentTime(
           updated.end_time,
         )}.`,
       );
@@ -579,12 +493,22 @@ export default function AppointmentsPage() {
       setReschedulingAppointment(null);
       setSelectedSlot(null);
     } catch (err) {
-      setRescheduleError(
-        extractErrorMessage(
-          err,
-          "Failed to reschedule appointment. Please try again.",
-        ),
-      );
+      const outcome = classifyBookingFailure(err);
+      if (outcome === "conflict") {
+        rescheduleIdempotency.current.clear();
+        setSelectedSlot(null);
+        setRescheduleError(
+          `${extractErrorMessage(err, "Selected reschedule slot is no longer available.")} Live availability has been refreshed below.`,
+        );
+        await loadSlotsForDate(reschedulingAppointment.doctor_profile_id, rescheduleDate);
+      } else {
+        setRescheduleError(
+          extractErrorMessage(
+            err,
+            "Failed to reschedule appointment. Please try again.",
+          ),
+        );
+      }
     } finally {
       setIsRescheduling(false);
     }
@@ -594,7 +518,7 @@ export default function AppointmentsPage() {
   const counts = useMemo(() => {
     return {
       all: appointments.length,
-      upcoming: appointments.filter(isUpcoming).length,
+      upcoming: appointments.filter((appointment) => isUpcoming(appointment)).length,
       completed: appointments.filter((item) => item.status === "completed").length,
       cancelled: appointments.filter((item) => item.status === "cancelled").length,
     };
@@ -613,21 +537,19 @@ export default function AppointmentsPage() {
       })
       .filter((appointment) => {
         if (!query) return true;
-        const doctor = doctorsMap[appointment.doctor_profile_id];
+        const doctorMeta = resolveAppointmentDoctorMeta(appointment, doctorsMap);
         return [
           appointment.appointment_date,
           appointment.status,
           appointment.reason ?? "",
           appointment.id,
-          doctor?.full_name ?? "",
-          doctor?.specialization ?? "",
-          doctor?.clinic_name ?? "",
+          ...doctorMeta.searchTerms,
         ].some((value) => value.toLowerCase().includes(query));
       })
       .sort(
         (a, b) =>
-          getAppointmentDateTime(b).getTime() -
-          getAppointmentDateTime(a).getTime(),
+          appointmentInstant(b.appointment_date, b.start_time) -
+          appointmentInstant(a.appointment_date, a.start_time),
       );
   }, [appointments, filter, search, doctorsMap]);
 
@@ -746,7 +668,7 @@ export default function AppointmentsPage() {
                         <span className="slot-box-label">Current Slot</span>
                         <div className="slot-box-date">{formatDate(proposal.current_appointment_date || "")}</div>
                         <div className="slot-box-time">
-                          {formatTime(proposal.current_start_time || "")} – {formatTime(proposal.current_end_time || "")}
+                          {formatAppointmentTime(proposal.current_start_time || "")} – {formatAppointmentTime(proposal.current_end_time || "")}
                         </div>
                       </div>
 
@@ -758,7 +680,7 @@ export default function AppointmentsPage() {
                         <span className="slot-box-label">Proposed New Slot</span>
                         <div className="slot-box-date">{formatDate(proposal.proposed_date)}</div>
                         <div className="slot-box-time">
-                          {formatTime(proposal.proposed_start_time)} – {formatTime(proposal.proposed_end_time)}
+                          {formatAppointmentTime(proposal.proposed_start_time)} – {formatAppointmentTime(proposal.proposed_end_time)}
                         </div>
                       </div>
                     </div>
@@ -898,6 +820,9 @@ export default function AppointmentsPage() {
             </label>
           </div>
 
+          <PatientHistoryControls page={history.page} offset={history.offset}
+            loadedCount={appointments.length} setOffset={history.setOffset} />
+
           {loading ? (
             <div className="appointments-state">
               <div className="appointments-spinner" />
@@ -926,10 +851,10 @@ export default function AppointmentsPage() {
               </span>
               <h3>
                 {search
-                  ? "No matching appointments"
+                  ? "No matching appointments on this page"
                   : filter === "all"
-                    ? "No appointments yet"
-                    : `No ${filter} appointments`}
+                    ? history.offset > 0 ? "No appointments on this page" : "No appointments yet"
+                    : `No ${filter} appointments on this page`}
               </h3>
               <p>
                 {search
@@ -955,7 +880,7 @@ export default function AppointmentsPage() {
               {filteredAppointments.map((appointment) => {
                 const upcoming = isUpcoming(appointment);
                 const canModify = appointment.status === "booked" && upcoming;
-                const doctor = doctorsMap[appointment.doctor_profile_id];
+                const doctorMeta = resolveAppointmentDoctorMeta(appointment, doctorsMap);
                 const pendingProposal = pendingProposals.find(
                   (p) => p.appointment_id === appointment.id,
                 );
@@ -973,13 +898,11 @@ export default function AppointmentsPage() {
                       <div className="appointment-list-top">
                         <div className="appointment-type-row">
                           <span className="appointment-list-type">
-                            {doctor?.specialization
-                              ? doctor.specialization.toUpperCase()
-                              : "DOCTOR CONSULTATION"}
+                            {doctorMeta.specializationLabel}
                           </span>
-                          {doctor?.clinic_name && (
+                          {doctorMeta.clinicName && (
                             <span className="appointment-clinic-name">
-                              · {doctor.clinic_name}
+                              · {doctorMeta.clinicName}
                             </span>
                           )}
                         </div>
@@ -1001,11 +924,7 @@ export default function AppointmentsPage() {
                         </div>
                       </div>
 
-                      <h3>
-                        {doctor
-                          ? `Dr. ${doctor.full_name}`
-                          : "Consultation appointment"}
-                      </h3>
+                      <h3>{doctorMeta.heading}</h3>
 
                       <div className="appointment-list-details">
                         <span>
@@ -1014,8 +933,8 @@ export default function AppointmentsPage() {
                         </span>
                         <span>
                           <Clock3 size={15} />
-                          {formatTime(appointment.start_time)} –{" "}
-                          {formatTime(appointment.end_time)}
+                          {formatAppointmentTime(appointment.start_time)} –{" "}
+                          {formatAppointmentTime(appointment.end_time)}
                         </span>
                       </div>
 
@@ -1032,7 +951,7 @@ export default function AppointmentsPage() {
                             Doctor proposed rescheduling to{" "}
                             <strong>
                               {formatDate(pendingProposal.proposed_date)} at{" "}
-                              {formatTime(pendingProposal.proposed_start_time)}
+                              {formatAppointmentTime(pendingProposal.proposed_start_time)}
                             </strong>
                             . Review action above.
                           </span>
@@ -1114,7 +1033,7 @@ export default function AppointmentsPage() {
               }
             }}
           >
-            <div className="appointment-modal-dialog cancel-modal">
+            <div className="appointment-modal-dialog cancel-modal" ref={cancelModalRef} tabIndex={-1}>
               <button
                 type="button"
                 className="appointment-modal-close"
@@ -1142,17 +1061,15 @@ export default function AppointmentsPage() {
                 <div>
                   <span>Practitioner</span>
                   <strong>
-                    {doctorsMap[cancellingAppointment.doctor_profile_id]
-                      ? `Dr. ${doctorsMap[cancellingAppointment.doctor_profile_id].full_name}`
-                      : "Healthcare Practitioner"}
+                    {resolveAppointmentDoctorMeta(cancellingAppointment, doctorsMap).modalName}
                   </strong>
                 </div>
                 <div>
                   <span>Scheduled Date & Time</span>
                   <strong>
                     {formatDate(cancellingAppointment.appointment_date)} ·{" "}
-                    {formatTime(cancellingAppointment.start_time)} –{" "}
-                    {formatTime(cancellingAppointment.end_time)}
+                    {formatAppointmentTime(cancellingAppointment.start_time)} –{" "}
+                    {formatAppointmentTime(cancellingAppointment.end_time)}
                   </strong>
                 </div>
                 {cancellingAppointment.reason && (
@@ -1222,7 +1139,7 @@ export default function AppointmentsPage() {
               }
             }}
           >
-            <div className="appointment-modal-dialog reschedule-modal">
+            <div className="appointment-modal-dialog reschedule-modal" ref={rescheduleModalRef} tabIndex={-1}>
               <button
                 type="button"
                 className="appointment-modal-close"
@@ -1246,14 +1163,12 @@ export default function AppointmentsPage() {
                 </div>
                 <div className="reschedule-brief-meta">
                   <h3>
-                    {doctorsMap[reschedulingAppointment.doctor_profile_id]
-                      ? `Dr. ${doctorsMap[reschedulingAppointment.doctor_profile_id].full_name}`
-                      : "Doctor Consultation"}
+                    {resolveAppointmentDoctorMeta(reschedulingAppointment, doctorsMap).modalName}
                   </h3>
                   <span>
                     Current: {formatDate(reschedulingAppointment.appointment_date)} at{" "}
-                    {formatTime(reschedulingAppointment.start_time)} –{" "}
-                    {formatTime(reschedulingAppointment.end_time)}
+                    {formatAppointmentTime(reschedulingAppointment.start_time)} –{" "}
+                    {formatAppointmentTime(reschedulingAppointment.end_time)}
                   </span>
                 </div>
               </div>
@@ -1266,18 +1181,50 @@ export default function AppointmentsPage() {
               )}
 
               <form onSubmit={handleSubmitReschedule} className="reschedule-form">
+                <div className="reschedule-weekly-schedule">
+                  <div className="reschedule-weekly-header">
+                    <span>Weekly consulting hours</span>
+                    <small>Recurring schedule (IST)</small>
+                  </div>
+                  {loadingRescheduleSchedule ? (
+                    <div className="reschedule-weekly-loading">
+                      <Loader2 size={14} className="spinner" />
+                      <span>Loading weekly consulting hours...</span>
+                    </div>
+                  ) : rescheduleScheduleNote ? (
+                    <p className="reschedule-weekly-note">{rescheduleScheduleNote}</p>
+                  ) : rescheduleWeeklySchedule.length === 0 ? (
+                    <p className="reschedule-weekly-note">
+                      No recurring weekly schedule is currently published.
+                    </p>
+                  ) : (
+                    <div className="reschedule-weekly-list">
+                      {rescheduleWeeklySchedule.map((entry) => (
+                        <div key={`${entry.weekday}-${entry.timeRange}`} className="reschedule-weekly-item">
+                          <strong>{entry.shortDay}</strong>
+                          <span>{entry.timeRange}</span>
+                          <small>{entry.slotDurationMinutes}m slots</small>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  <p className="reschedule-weekly-disclaimer">
+                    Weekly hours do not guarantee live availability. Pick a date below to see open slots.
+                  </p>
+                </div>
+
                 {/* 1. DATE SELECTION */}
                 <div className="reschedule-field-group">
                   <label htmlFor="reschedule-date-input" className="reschedule-label">
                     <span>1. Select new consultation date</span>
-                    <small>Tomorrow onwards (Asia/Kolkata)</small>
+                    <small>Today onwards (up to 60 days, Asia/Kolkata)</small>
                   </label>
                   <input
                     id="reschedule-date-input"
                     type="date"
                     className="reschedule-date-input"
                     value={rescheduleDate}
-                    min={getTomorrowString()}
+                    min={getTodayString()}
                     max={getMaxDateString()}
                     disabled={isRescheduling}
                     onChange={(e) => handleDateChange(e.target.value)}
@@ -1348,6 +1295,7 @@ export default function AppointmentsPage() {
                           <button
                             type="button"
                             key={slot.start_time}
+                            aria-pressed={isSelected}
                             className={`reschedule-slot-chip ${
                               isSelected ? "selected" : ""
                             } ${isSameAsCurrent ? "disabled-current" : ""}`}
@@ -1358,15 +1306,15 @@ export default function AppointmentsPage() {
                             title={
                               isSameAsCurrent
                                 ? "Already your current appointment slot"
-                                : `${formatTime(slot.start_time)} to ${formatTime(
+                                : `${formatAppointmentTime(slot.start_time)} to ${formatAppointmentTime(
                                     slot.end_time,
                                   )}`
                             }
                           >
                             <Clock3 size={13} />
                             <span>
-                              {formatTime(slot.start_time)} –{" "}
-                              {formatTime(slot.end_time)}
+                              {formatAppointmentTime(slot.start_time)} –{" "}
+                              {formatAppointmentTime(slot.end_time)}
                             </span>
                             {isSameAsCurrent && (
                               <small className="slot-current-tag">Current</small>
@@ -1386,8 +1334,8 @@ export default function AppointmentsPage() {
                       <strong>New consultation schedule:</strong>
                       <span>
                         {formatDate(rescheduleDate)} from{" "}
-                        {formatTime(selectedSlot.start_time)} to{" "}
-                        {formatTime(selectedSlot.end_time)}
+                        {formatAppointmentTime(selectedSlot.start_time)} to{" "}
+                        {formatAppointmentTime(selectedSlot.end_time)}
                       </span>
                     </div>
                   </div>
@@ -1493,8 +1441,8 @@ export default function AppointmentsPage() {
                   <div className="accept-slot-pill original">
                     <span className="accept-details-original">
                       {formatDate(acceptingProposal.current_appointment_date || "")} ·{" "}
-                      {formatTime(acceptingProposal.current_start_time || "")} –{" "}
-                      {formatTime(acceptingProposal.current_end_time || "")}
+                      {formatAppointmentTime(acceptingProposal.current_start_time || "")} –{" "}
+                      {formatAppointmentTime(acceptingProposal.current_end_time || "")}
                     </span>
                     <span className="accept-slot-tag release">Released</span>
                   </div>
@@ -1505,8 +1453,8 @@ export default function AppointmentsPage() {
                   <div className="accept-slot-pill proposed">
                     <strong className="accept-details-new">
                       {formatDate(acceptingProposal.proposed_date)} ·{" "}
-                      {formatTime(acceptingProposal.proposed_start_time)} –{" "}
-                      {formatTime(acceptingProposal.proposed_end_time)}
+                      {formatAppointmentTime(acceptingProposal.proposed_start_time)} –{" "}
+                      {formatAppointmentTime(acceptingProposal.proposed_end_time)}
                     </strong>
                     <span className="accept-slot-tag confirmed">Confirmed</span>
                   </div>

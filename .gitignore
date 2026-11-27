@@ -113,3 +113,21 @@ env*/
 **/.venv*/
 **/venv*/
 **/env*/
+
+# Out-of-scope X-ray notebook
+MARU.ipynb
+
+# Scratch test files
+scratch/
+
+
+# ANVAYA — Private clinical and internal-review assets
+/Anvaya_Main_Backend_Starter/backend/uploads/
+/Anvaya_Main_Backend_Starter/backend/app/uploads/
+/internal_review/
+
+# Local clinical credentials and database backups
+*.dpapi
+*.dump
+*.backup
+*.sql.gz

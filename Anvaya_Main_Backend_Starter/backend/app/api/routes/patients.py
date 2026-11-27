@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_roles
+from app.api.deps import require_roles, verify_csrf_and_origin
 from app.db.session import get_db
 from app.models.user import User
 from app.models.patient_profile import PatientProfile
@@ -38,6 +38,7 @@ def create_or_update_my_profile(
     payload: PatientProfileUpdate,
     current_user: User = Depends(require_roles("patient")),
     db: Session = Depends(get_db),
+    _csrf: None = Depends(verify_csrf_and_origin),
 ):
     profile = db.scalar(
         select(PatientProfile).where(

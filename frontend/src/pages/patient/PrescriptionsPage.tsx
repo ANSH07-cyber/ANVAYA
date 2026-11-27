@@ -1,5 +1,4 @@
-
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   ArrowRight,
@@ -16,7 +15,8 @@ import { useAuth } from "../../app/AuthContext";
 import PortalLayout from "../../layouts/PortalLayout";
 import { patientNavigation } from "./patientNavigation";
 import { patientService } from "../../services/patientService";
-import type { PatientPrescription } from "../../types/patient";
+import PatientHistoryControls from "./PatientHistoryControls";
+import { usePatientHistoryPage } from "./usePatientHistoryPage";
 import "./PrescriptionsPage.css";
 
 type PrescriptionFilter = "all" | "recent";
@@ -37,39 +37,10 @@ export default function PrescriptionsPage() {
   const { user } = useAuth();
   const displayName = user?.full_name?.trim() || "Patient";
 
-  const [prescriptions, setPrescriptions] = useState<PatientPrescription[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const history = usePatientHistoryPage(user?.id, patientService.getMyPrescriptions, "your prescriptions");
+  const { items: prescriptions, loading, error } = history;
   const [filter, setFilter] = useState<PrescriptionFilter>("all");
   const [search, setSearch] = useState("");
-
-  useEffect(() => {
-    let active = true;
-
-    async function loadPrescriptions() {
-      try {
-        const response = await patientService.getMyPrescriptions();
-
-        if (active) {
-          setPrescriptions(response.items);
-        }
-      } catch {
-        if (active) {
-          setError(
-            "We couldn't load your prescriptions. Please try again.",
-          );
-        }
-      } finally {
-        if (active) setLoading(false);
-      }
-    }
-
-    void loadPrescriptions();
-
-    return () => {
-      active = false;
-    };
-  }, []);
 
   const counts = useMemo(() => {
     const medicines = prescriptions.reduce(
@@ -264,6 +235,9 @@ export default function PrescriptionsPage() {
             </label>
           </div>
 
+          <PatientHistoryControls page={history.page} offset={history.offset}
+            loadedCount={prescriptions.length} setOffset={history.setOffset} />
+
           {loading ? (
             <div className="prescriptions-state">
               <div className="prescriptions-spinner" />
@@ -280,7 +254,7 @@ export default function PrescriptionsPage() {
               <button
                 type="button"
                 className="prescriptions-retry-button"
-                onClick={() => window.location.reload()}
+                onClick={history.reload}
               >
                 Refresh page
               </button>
@@ -292,10 +266,10 @@ export default function PrescriptionsPage() {
               </span>
               <h3>
                 {search
-                  ? "No matching prescriptions"
+                  ? "No matching prescriptions on this page"
                   : filter === "recent"
-                    ? "No prescriptions in the last 30 days"
-                    : "No prescriptions yet"}
+                    ? "No prescriptions from the last 30 days on this page"
+                    : history.offset > 0 ? "No entries on this page" : "No prescriptions yet"}
               </h3>
               <p>
                 {search

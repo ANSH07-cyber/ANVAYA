@@ -91,6 +91,7 @@ def grant_consent(
     payload: ConsentGrantRequest,
     current_user: User = Depends(require_roles("patient")),
     db: Session = Depends(get_db),
+    _csrf: None = Depends(verify_csrf_and_origin),
 ) -> ConsentRead:
 
     # Find and lock the authenticated patient's profile.
@@ -259,6 +260,7 @@ def revoke_consent(
     consent_id: UUID,
     current_user: User = Depends(require_roles("patient")),
     db: Session = Depends(get_db),
+    _csrf: None = Depends(verify_csrf_and_origin),
 ) -> ConsentRead:
 
     # Find and lock the authenticated patient's profile.
@@ -347,6 +349,7 @@ def revoke_all_consents_for_doctor(
     doctor_profile_id: UUID,
     current_user: User = Depends(require_roles("patient")),
     db: Session = Depends(get_db),
+    _csrf: None = Depends(verify_csrf_and_origin),
 ) -> ConsentListResponse:
     """Atomically revoke all active consent records between the authenticated patient and a specific doctor."""
     patient_profile = db.scalar(

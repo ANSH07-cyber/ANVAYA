@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import {
   Activity,
   AlertCircle,
+  AlertTriangle,
   ArrowRight,
   CalendarCheck,
   CalendarDays,
@@ -21,8 +22,11 @@ import DoctorLayout from "../../layouts/DoctorLayout";
 import { doctorService } from "../../services/doctorService";
 import type {
   DoctorAppointmentItem,
+  DoctorAppointmentSummaryResponse,
   DoctorAvailabilityItem,
 } from "../../types/doctor";
+import { useDoctorProfileStatus } from "./useDoctorProfileStatus";
+import DoctorVerificationNotice from "./components/DoctorVerificationNotice";
 import "./DoctorDashboardPage.css";
 
 const WEEKDAY_NAMES = [
@@ -84,7 +88,16 @@ function formatTimeSlot(timeStr: string): string {
 
 export default function DoctorDashboardPage() {
   const { user } = useAuth();
+  const {
+    profile,
+    verificationStatus,
+    isApproved,
+    isLoading: isProfileLoading,
+    refetch: refetchProfile,
+  } = useDoctorProfileStatus();
+
   const [appointments, setAppointments] = useState<DoctorAppointmentItem[]>([]);
+  const [summary, setSummary] = useState<DoctorAppointmentSummaryResponse | null>(null);
   const [totalAppointmentsOnRecord, setTotalAppointmentsOnRecord] = useState<number>(0);
   const [isPartialDataset, setIsPartialDataset] = useState<boolean>(false);
   const [availabilityList, setAvailabilityList] = useState<DoctorAvailabilityItem[]>([]);
@@ -99,11 +112,25 @@ export default function DoctorDashboardPage() {
     : "Doctor";
 
   const fetchDashboardData = useCallback(async () => {
+    // Only authorized doctors can access clinical appointments and availability
+    if (!isApproved) {
+      setIsLoading(false);
+      return;
+    }
+
     setIsLoading(true);
     setError(null);
 
     try {
-      // 1. Fetch appointments with complete pagination handling
+      // 1. Fetch server-backed summary for accurate counts (not capped at 500)
+      try {
+        const sum = await doctorService.getDoctorAppointmentSummary();
+        setSummary(sum);
+      } catch {
+        // Graceful fallback to client counts if summary endpoint is unavailable
+      }
+
+      // 2. Fetch appointments with complete pagination handling
       const firstPage = await doctorService.getDoctorAppointments(100, 0);
       let loadedItems: DoctorAppointmentItem[] = [...firstPage.items];
       const totalCount = firstPage.total;
@@ -123,7 +150,7 @@ export default function DoctorDashboardPage() {
       setTotalAppointmentsOnRecord(totalCount);
       setIsPartialDataset(loadedItems.length < totalCount);
 
-      // 2. Fetch configured doctor availability
+      // 3. Fetch configured doctor availability
       const availabilityResponse = await doctorService.getDoctorAvailability();
       setAvailabilityList(availabilityResponse.items);
     } catch (err: unknown) {
@@ -135,11 +162,15 @@ export default function DoctorDashboardPage() {
     } finally {
       setIsLoading(false);
     }
-  }, []);
+  }, [isApproved]);
 
   useEffect(() => {
-    void fetchDashboardData();
-  }, [fetchDashboardData]);
+    if (!isProfileLoading && isApproved) {
+      void fetchDashboardData();
+    } else if (!isProfileLoading && !isApproved) {
+      setIsLoading(false);
+    }
+  }, [fetchDashboardData, isApproved, isProfileLoading]);
 
   // Derived real data strictly using Asia/Kolkata date
   const todayKolkata = getTodayKolkataDate();
@@ -160,6 +191,16 @@ export default function DoctorDashboardPage() {
       return a.start_time.localeCompare(b.start_time);
     });
 
+  const pastDueAppointments = appointments
+    .filter(
+      (appt) => appt.appointment_date < todayKolkata && appt.status === "booked"
+    )
+    .sort((a, b) => {
+      const dateCmp = a.appointment_date.localeCompare(b.appointment_date);
+      if (dateCmp !== 0) return dateCmp;
+      return a.start_time.localeCompare(b.start_time);
+    });
+
   const completedAppointments = appointments.filter(
     (appt) => appt.status === "completed"
   );
@@ -168,6 +209,57 @@ export default function DoctorDashboardPage() {
 
   // Group availability by day for summary rail
   const activeDaysSet = new Set(activeWeeklyShifts.map((s) => s.weekday));
+
+  // If profile is loading, render layout with loading skeleton
+  if (isProfileLoading) {
+    return (
+      <DoctorLayout title="Clinical Command Center">
+        <div className="doc-dashboard" style={{ padding: "2rem 0" }}>
+          <div className="doc-skeleton-box" style={{ height: 80, marginBottom: 24 }} />
+          <div className="doc-skeleton-box" style={{ height: 140, marginBottom: 24 }} />
+          <div className="doc-skeleton-box" style={{ height: 320 }} />
+        </div>
+      </DoctorLayout>
+    );
+  }
+
+  // If doctor is NOT approved (pending, rejected, or suspended)
+  if (!isApproved && verificationStatus) {
+    return (
+      <DoctorLayout title="Clinical Command Center">
+        <div className="doc-dashboard">
+          <header className="doc-command-bar">
+            <div className="doc-command-left">
+              <div className="doc-command-kicker">
+                <Stethoscope size={13} />
+                <span>PRACTICE WORKSPACE</span>
+              </div>
+              <h1 className="doc-command-title">Welcome, {displayName}</h1>
+              <p className="doc-command-meta">
+                <span>{getFormattedHeaderDate()}</span> · Asia/Kolkata (IST)
+              </p>
+            </div>
+            <div className="doc-command-actions">
+              <Link to="/doctor/profile" className="doc-btn doc-btn-primary">
+                <UserCheck size={15} />
+                <span>Practice Profile</span>
+              </Link>
+            </div>
+          </header>
+
+          <DoctorVerificationNotice
+            status={verificationStatus}
+            licenseNumber={profile?.license_number}
+            specialization={profile?.specialization}
+            qualification={profile?.qualification}
+            moduleName="Clinical Command Center & Appointments"
+            onRefresh={refetchProfile}
+            isRefreshing={isProfileLoading}
+          />
+        </div>
+      </DoctorLayout>
+    );
+  }
 
   return (
     <DoctorLayout title="Clinical Command Center">
@@ -225,11 +317,11 @@ export default function DoctorDashboardPage() {
               </div>
             </div>
             <div className="doc-metric-val">
-              {isLoading ? "—" : todayAppointments.length}
+              {isLoading ? "—" : summary?.today_count ?? todayAppointments.length}
             </div>
             <div className="doc-metric-sub">
               <span>Patients booked for today ({todayKolkata})</span>
-              {isPartialDataset && (
+              {isPartialDataset && !summary && (
                 <span
                   className="doc-partial-pill"
                   title={`Derived from ${appointments.length} loaded records of ${totalAppointmentsOnRecord} total on record`}
@@ -248,11 +340,11 @@ export default function DoctorDashboardPage() {
               </div>
             </div>
             <div className="doc-metric-val">
-              {isLoading ? "—" : upcomingAppointments.length}
+              {isLoading ? "—" : summary?.upcoming_count ?? upcomingAppointments.length}
             </div>
             <div className="doc-metric-sub">
               <span>Future scheduled visits</span>
-              {isPartialDataset && (
+              {isPartialDataset && !summary && (
                 <span
                   className="doc-partial-pill"
                   title={`Derived from ${appointments.length} loaded records of ${totalAppointmentsOnRecord} total on record`}
@@ -260,6 +352,23 @@ export default function DoctorDashboardPage() {
                   Partial ({appointments.length}/{totalAppointmentsOnRecord})
                 </span>
               )}
+            </div>
+          </div>
+
+          <div className={`doc-metric-card ${pastDueAppointments.length > 0 ? "doc-metric-card-warning" : ""}`} style={pastDueAppointments.length > 0 ? { borderColor: "rgba(245, 158, 11, 0.4)", background: "rgba(245, 158, 11, 0.04)" } : undefined}>
+            <div className="doc-metric-header">
+              <span className="doc-metric-label" style={pastDueAppointments.length > 0 ? { color: "#fbbf24" } : undefined}>
+                Past-Due Bookings
+              </span>
+              <div className="doc-metric-icon" style={pastDueAppointments.length > 0 ? { background: "rgba(245, 158, 11, 0.15)", color: "#f59e0b" } : undefined}>
+                <AlertTriangle size={18} />
+              </div>
+            </div>
+            <div className="doc-metric-val" style={pastDueAppointments.length > 0 ? { color: "#fbbf24" } : undefined}>
+              {isLoading ? "—" : summary?.past_due_count ?? pastDueAppointments.length}
+            </div>
+            <div className="doc-metric-sub">
+              <span>{pastDueAppointments.length > 0 ? "Requires documentation or reschedule" : "Zero overdue visits"}</span>
             </div>
           </div>
 
@@ -271,11 +380,11 @@ export default function DoctorDashboardPage() {
               </div>
             </div>
             <div className="doc-metric-val">
-              {isLoading ? "—" : completedAppointments.length}
+              {isLoading ? "—" : summary?.completed_count ?? completedAppointments.length}
             </div>
             <div className="doc-metric-sub">
               <span>Conducted consultations</span>
-              {isPartialDataset && (
+              {isPartialDataset && !summary && (
                 <span
                   className="doc-partial-pill"
                   title={`Derived from ${appointments.length} loaded records of ${totalAppointmentsOnRecord} total on record`}
@@ -308,6 +417,117 @@ export default function DoctorDashboardPage() {
         <div className="doc-dashboard-grid">
           {/* Primary Clinical Panel (Left 68%) */}
           <main className="doc-main-panel">
+            {/* Overdue Past-Due Consultations Alert Card */}
+            {pastDueAppointments.length > 0 && (
+              <section
+                className="doc-section-card doc-past-due-alert-card"
+                style={{
+                  border: "1px solid rgba(245, 158, 11, 0.4)",
+                  background: "rgba(245, 158, 11, 0.05)",
+                  marginBottom: "1.5rem",
+                }}
+              >
+                <header
+                  className="doc-section-header"
+                  style={{ borderBottomColor: "rgba(245, 158, 11, 0.2)" }}
+                >
+                  <div className="doc-section-title-group">
+                    <div
+                      className="doc-section-icon"
+                      style={{
+                        background: "rgba(245, 158, 11, 0.15)",
+                        color: "#f59e0b",
+                      }}
+                    >
+                      <AlertTriangle size={18} />
+                    </div>
+                    <h2
+                      className="doc-section-title"
+                      style={{ color: "#fbbf24" }}
+                    >
+                      Action Needed: Past-Due Booked Consultations
+                    </h2>
+                  </div>
+                  <span
+                    className="doc-section-badge"
+                    style={{
+                      background: "rgba(245, 158, 11, 0.2)",
+                      color: "#fcd34d",
+                    }}
+                  >
+                    {pastDueAppointments.length} Overdue
+                  </span>
+                </header>
+                <div className="doc-section-body">
+                  <p
+                    style={{
+                      fontSize: "0.85rem",
+                      color: "#d1d5db",
+                      marginBottom: "1rem",
+                      lineHeight: 1.5,
+                    }}
+                  >
+                    The following consultations were scheduled for a past date but
+                    remain marked as booked. Please review, complete documentation, or
+                    reschedule with the patient.
+                  </p>
+                  <div className="doc-queue-list">
+                    {pastDueAppointments.map((appt) => (
+                      <div
+                        key={appt.id}
+                        className="doc-queue-item"
+                        style={{ borderColor: "rgba(245, 158, 11, 0.25)" }}
+                      >
+                        <div className="doc-queue-item-left">
+                          <div
+                            className="doc-queue-time-badge"
+                            style={{
+                              background: "rgba(245, 158, 11, 0.12)",
+                              color: "#fbbf24",
+                            }}
+                          >
+                            <span>{formatKolkataDate(appt.appointment_date)}</span>
+                            <span style={{ fontSize: 10, color: "#d97706" }}>
+                              {formatTimeSlot(appt.start_time)}
+                            </span>
+                          </div>
+
+                          <div className="doc-queue-patient-info">
+                            <span className="doc-queue-patient-name">
+                              {appt.patient_name || "Patient Consultation"}
+                            </span>
+                            <span className="doc-queue-patient-reason">
+                              {appt.reason || "Routine Consultation / Follow-up"}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="doc-queue-item-right">
+                          <span
+                            className="doc-status-tag booked"
+                            style={{
+                              borderColor: "#f59e0b",
+                              color: "#fbbf24",
+                              background: "rgba(245, 158, 11, 0.12)",
+                            }}
+                          >
+                            Overdue
+                          </span>
+                          <Link
+                            to={`/doctor/consultation/${appt.id}`}
+                            className="doc-btn doc-btn-primary doc-btn-sm"
+                          >
+                            <span>Open Room</span>
+                            <ArrowRight size={13} />
+                          </Link>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </section>
+            )}
+
             {/* Today's Schedule Card */}
             <section className="doc-section-card">
               <header className="doc-section-header">

@@ -7,7 +7,7 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_roles
+from app.api.deps import require_roles, verify_csrf_and_origin
 from app.db.session import get_db
 from app.models.user import User
 from app.models.doctor_profile import DoctorProfile
@@ -66,6 +66,7 @@ def create_my_availability(
     payload: DoctorAvailabilityCreate,
     current_user: User = Depends(require_roles("doctor")),
     db: Session = Depends(get_db),
+    _csrf: None = Depends(verify_csrf_and_origin),
 ) -> DoctorAvailabilityRead:
     profile = get_my_doctor_profile(current_user, db, for_update=True)
 
@@ -151,6 +152,7 @@ def update_my_availability(
     payload: DoctorAvailabilityUpdate,
     current_user: User = Depends(require_roles("doctor")),
     db: Session = Depends(get_db),
+    _csrf: None = Depends(verify_csrf_and_origin),
 ) -> DoctorAvailabilityRead:
     profile = get_my_doctor_profile(current_user, db, for_update=True)
 
@@ -248,6 +250,7 @@ def update_my_availability_status(
     payload: DoctorAvailabilityStatusUpdate,
     current_user: User = Depends(require_roles("doctor")),
     db: Session = Depends(get_db),
+    _csrf: None = Depends(verify_csrf_and_origin),
 ) -> DoctorAvailabilityRead:
     profile = get_my_doctor_profile(current_user, db, for_update=True)
 
@@ -298,6 +301,7 @@ def delete_my_availability(
     availability_id: UUID,
     current_user: User = Depends(require_roles("doctor")),
     db: Session = Depends(get_db),
+    _csrf: None = Depends(verify_csrf_and_origin),
 ) -> DoctorAvailabilityRead:
     profile = get_my_doctor_profile(current_user, db, for_update=True)
 

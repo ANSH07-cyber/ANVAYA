@@ -141,6 +141,7 @@ def create_doctor(
     payload: DoctorAccountCreate,
     current_user: User = Depends(require_roles("admin")),
     db: Session = Depends(get_db),
+    _csrf: None = Depends(verify_csrf_and_origin),
 ) -> DoctorProfileRead:
 
     normalized_email = str(payload.email).strip().lower()
@@ -349,6 +350,7 @@ def review_doctor(
     payload: DoctorVerificationUpdate,
     current_user: User = Depends(require_roles("admin")),
     db: Session = Depends(get_db),
+    _csrf: None = Depends(verify_csrf_and_origin),
 ) -> DoctorProfileRead:
 
     # Row-level lock on doctor profile to prevent concurrent overwrites

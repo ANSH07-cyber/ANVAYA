@@ -80,6 +80,11 @@ class SkinLesionAnalysis(Base):
         nullable=False,
     )
 
+    # NULL preserves unknown provenance for rows predating verified inference.
+    inference_mode: Mapped[str | None] = mapped_column(String(40), nullable=True)
+    model_version: Mapped[str | None] = mapped_column(String(100), nullable=True)
+    checkpoint_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
+
     education_title: Mapped[str | None] = mapped_column(
         String(255),
         nullable=True,

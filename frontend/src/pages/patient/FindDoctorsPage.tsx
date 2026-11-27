@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { Link } from "react-router-dom";
 import axios from "axios";
 import {
@@ -23,75 +23,34 @@ import {
 import { useAuth } from "../../app/AuthContext";
 import PortalLayout from "../../layouts/PortalLayout";
 import { patientNavigation } from "./patientNavigation";
-import api from "../../services/api";
 import { patientService } from "../../services/patientService";
+import {
+  classifyBookingFailure, clinicDateAfter, createIdempotencyManager, createSlotRequests,
+  filterUpcomingSlots, formatAppointmentTime, formatClinicDate, formatDoctorHeading,
+  formatWeeklyScheduleSummary, isUpcomingSlot, matchBookedAttempt, patientReadError,
+  scanPatientPages, validBookingDate, type WeeklyScheduleEntry,
+} from "../../services/patientReliability";
+import { useDialogFocusTrap } from "./useDialogFocusTrap";
 import type {
+  AppointmentCreateRequest,
+  ApprovedDoctorSummary,
   AvailableSlot,
   PatientAppointment,
 } from "../../types/patient";
 import "./FindDoctorsPage.css";
 
-interface Doctor {
-  id: string;
-  full_name: string;
-  specialization: string;
-  qualification: string;
-  years_experience: number;
-  clinic_name: string | null;
-  consultation_fee: string | null;
-  bio: string | null;
-}
+type Doctor = ApprovedDoctorSummary;
 
-interface DoctorDirectoryResponse {
-  items: Doctor[];
-  total: number;
-  limit: number;
-  offset: number;
-}
+const getTodayString = () => clinicDateAfter(0);
+const getMaxDateString = () => clinicDateAfter(60);
 
-function getTomorrowString(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function getMaxDateString(): string {
-  const d = new Date();
-  d.setDate(d.getDate() + 60);
-  const year = d.getFullYear();
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const day = String(d.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
-}
-
-function formatTime(value: string) {
-  const [hours, minutes] = value.split(":").map(Number);
-  if (Number.isNaN(hours) || Number.isNaN(minutes)) return value;
-  const date = new Date();
-  date.setHours(hours, minutes, 0, 0);
-  return new Intl.DateTimeFormat("en-IN", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-  }).format(date);
-}
-
-function formatDisplayDate(value: string) {
-  const date = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat("en-IN", {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  }).format(date);
-}
+const formatDisplayDate = formatClinicDate;
 
 function getBookingErrorMessage(error: unknown): string {
   if (axios.isAxiosError(error)) {
+    if ([401, 403, 404].includes(error.response?.status ?? 0)) {
+      return patientReadError(error, "the booking details");
+    }
     const detail = error.response?.data?.detail;
     if (typeof detail === "string") return detail;
     if (Array.isArray(detail)) {
@@ -108,14 +67,22 @@ export default function FindDoctorsPage() {
   const displayName = user?.full_name?.trim() || "Patient";
 
   const [doctors, setDoctors] = useState<Doctor[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [directoryRevision, setDirectoryRevision] = useState(0);
+  const [directoryOwner, setDirectoryOwner] = useState<string>();
+  const [directoryLoading, setDirectoryLoading] = useState(true);
+  const [directoryComplete, setDirectoryComplete] = useState(false);
+  const loading = directoryLoading || directoryOwner !== user?.id;
+  const visibleDoctors = useMemo(() => directoryOwner === user?.id ? doctors : [], [directoryOwner, doctors, user?.id]);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [specialization, setSpecialization] = useState("all");
 
   // Booking Modal State
   const [bookingDoctor, setBookingDoctor] = useState<Doctor | null>(null);
-  const [bookingDate, setBookingDate] = useState<string>(getTomorrowString());
+  const [bookingDate, setBookingDate] = useState<string>(getTodayString());
+  const [weeklySchedule, setWeeklySchedule] = useState<WeeklyScheduleEntry[]>([]);
+  const [loadingWeeklySchedule, setLoadingWeeklySchedule] = useState(false);
+  const [weeklyScheduleError, setWeeklyScheduleError] = useState("");
   const [slots, setSlots] = useState<AvailableSlot[]>([]);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [slotsError, setSlotsError] = useState("");
@@ -125,76 +92,135 @@ export default function FindDoctorsPage() {
   const [bookingError, setBookingError] = useState("");
   const [bookingSuccess, setBookingSuccess] = useState<PatientAppointment | null>(null);
 
+  const [slotRequests] = useState(createSlotRequests);
+  const weeklyRequestRef = useRef<AbortController | null>(null);
+  const bookingModalRef = useRef<HTMLDivElement>(null);
+  const bookingIdempotency = useRef(createIdempotencyManager());
+  const bookingInFlight = useRef(false);
+  const [unconfirmed, setUnconfirmed] = useState<{
+    doctor: Doctor;
+    attempt: AppointmentCreateRequest;
+  } | null>(null);
+
+  useDialogFocusTrap(Boolean(bookingDoctor), bookingModalRef);
+
   useEffect(() => {
-    let active = true;
+    if (!user?.id) return;
+    const owner = user.id;
+    const controller = new AbortController();
+    setDirectoryLoading(true);
+    setError("");
+    void scanPatientPages(patientService.getApprovedDoctorsDirectory, controller.signal).then((result) => {
+      if (controller.signal.aborted) return;
+      setDoctors(result.items);
+      setDirectoryComplete(result.complete);
+    }).catch((failure: unknown) => {
+      if (controller.signal.aborted) return;
+      setDoctors([]);
+      setDirectoryComplete(false);
+      setError(patientReadError(failure, "the doctor directory"));
+    }).finally(() => {
+      if (controller.signal.aborted) return;
+      setDirectoryOwner(owner);
+      setDirectoryLoading(false);
+    });
+    return () => controller.abort();
+  }, [user?.id, directoryRevision]);
 
-    async function loadDoctors() {
-      try {
-        const response = await api.get<DoctorDirectoryResponse>("/doctors");
+  const loadWeeklySchedule = useCallback(async (doctorId: string) => {
+    weeklyRequestRef.current?.abort();
+    const controller = new AbortController();
+    weeklyRequestRef.current = controller;
+    setWeeklySchedule([]);
+    setWeeklyScheduleError("");
+    setLoadingWeeklySchedule(true);
 
-        if (active) {
-          setDoctors(response.data.items);
-        }
-      } catch {
-        if (active) {
-          setError(
-            "We couldn't load the doctor directory. Please try again.",
-          );
-        }
-      } finally {
-        if (active) setLoading(false);
+    try {
+      const response = await patientService.getDoctorPublicAvailability(doctorId, controller.signal);
+      if (weeklyRequestRef.current !== controller || controller.signal.aborted) return;
+      setWeeklySchedule(formatWeeklyScheduleSummary(response.items));
+    } catch (err) {
+      if (weeklyRequestRef.current !== controller || controller.signal.aborted) return;
+      setWeeklyScheduleError(
+        axios.isAxiosError(err) && !err.response
+          ? "Couldn't load recurring weekly hours."
+          : getBookingErrorMessage(err),
+      );
+    } finally {
+      if (weeklyRequestRef.current === controller) {
+        setLoadingWeeklySchedule(false);
       }
     }
-
-    void loadDoctors();
-
-    return () => {
-      active = false;
-    };
   }, []);
 
   const loadSlots = useCallback(async (doctorId: string, date: string) => {
-    setLoadingSlots(true);
-    setSlotsError("");
+    const request = slotRequests.begin(doctorId, date);
+    setSlots([]);
     setSelectedSlot(null);
+    setSlotsError("");
+    setLoadingSlots(validBookingDate(date));
+    if (!validBookingDate(date)) {
+      setSlotsError("Choose today or a date within the next 60 days (Asia/Kolkata).");
+      return;
+    }
 
     try {
-      const response = await patientService.getDoctorAvailabilitySlots(doctorId, date);
-      setSlots(response.items);
+      const response = await patientService.getDoctorAvailabilitySlots(doctorId, date, request.signal);
+      if (!request.isCurrent()) return;
+      if (!request.matches(response)) {
+        setSlotsError("The availability response did not match the selected doctor and date. Please refresh.");
+        return;
+      }
+      setSlots(filterUpcomingSlots(date, response.items));
     } catch (err) {
-      setSlots([]);
-      setSlotsError(getBookingErrorMessage(err));
+      if (request.isCurrent()) {
+        setSlotsError(axios.isAxiosError(err) && !err.response
+          ? "Couldn't check availability. Check your connection and try again."
+          : getBookingErrorMessage(err));
+      }
     } finally {
-      setLoadingSlots(false);
+      if (request.isCurrent()) setLoadingSlots(false);
     }
-  }, []);
+  }, [slotRequests]);
 
-  const handleCloseBooking = () => {
+  const handleCloseBooking = useCallback(() => {
+    if (bookingInFlight.current) return;
+    slotRequests.invalidate();
+    weeklyRequestRef.current?.abort();
+    weeklyRequestRef.current = null;
+    if (!unconfirmed) {
+      bookingIdempotency.current.clear();
+    }
     setBookingDoctor(null);
+    setWeeklySchedule([]);
+    setWeeklyScheduleError("");
     setSlots([]);
     setSelectedSlot(null);
     setReason("");
     setBookingError("");
     setBookingSuccess(null);
-  };
+  }, [slotRequests, unconfirmed]);
 
   const handleOpenBooking = (doctor: Doctor) => {
-    setBookingDoctor(doctor);
-    setBookingDate(getTomorrowString());
+    if (bookingInFlight.current) return;
+    const date = getTodayString();
+    setBookingDoctor(unconfirmed?.doctor ?? doctor);
+    setBookingDate(date);
     setSelectedSlot(null);
     setReason("");
     setBookingError("");
     setBookingSuccess(null);
+    if (!unconfirmed) {
+      bookingIdempotency.current.clear();
+      void loadWeeklySchedule(doctor.id);
+      void loadSlots(doctor.id, date);
+    }
   };
 
-  // Fetch available slots when booking modal is opened or date changes
-  useEffect(() => {
-    if (!bookingDoctor) {
-      return;
-    }
-
-    void loadSlots(bookingDoctor.id, bookingDate);
-  }, [bookingDoctor, bookingDate, loadSlots]);
+  useEffect(() => () => {
+    slotRequests.invalidate();
+    weeklyRequestRef.current?.abort();
+  }, [slotRequests]);
 
   // Accessibility: Close modal on Escape key press if not actively submitting
   useEffect(() => {
@@ -208,55 +234,134 @@ export default function FindDoctorsPage() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [bookingDoctor, submitting]);
+  }, [bookingDoctor, handleCloseBooking, submitting]);
 
   const handleSubmitBooking = async (event: FormEvent) => {
     event.preventDefault();
-
-    if (!bookingDoctor || !selectedSlot) {
-      setBookingError("Please select an available time slot for your consultation.");
+    if (bookingInFlight.current || unconfirmed || bookingSuccess) return;
+    if (!bookingDoctor || !selectedSlot || loadingSlots || !validBookingDate(bookingDate) ||
+        !slots.some((slot) => slot.start_time === selectedSlot.start_time)) {
+      setBookingError("Select a date and a currently available time slot.");
       return;
     }
 
+    if (!isUpcomingSlot(bookingDate, selectedSlot.start_time)) {
+      setSelectedSlot(null);
+      bookingIdempotency.current.clear();
+      setBookingError("That time slot has just passed in Asia/Kolkata. Please choose an upcoming slot.");
+      await loadSlots(bookingDoctor.id, bookingDate);
+      return;
+    }
+
+    const normalizedReason = reason.trim() || null;
+    const fingerprint = JSON.stringify({
+      doctor_profile_id: bookingDoctor.id,
+      appointment_date: bookingDate,
+      start_time: selectedSlot.start_time,
+      reason: normalizedReason,
+    });
+    const idempotencyKey = bookingIdempotency.current.getKey(fingerprint);
+
+    const attempt: AppointmentCreateRequest = {
+      doctor_profile_id: bookingDoctor.id,
+      appointment_date: bookingDate,
+      start_time: selectedSlot.start_time,
+      reason: normalizedReason,
+      idempotency_key: idempotencyKey,
+    };
+    bookingInFlight.current = true;
     setSubmitting(true);
     setBookingError("");
 
     try {
-      const appointment = await patientService.bookAppointment({
-        doctor_profile_id: bookingDoctor.id,
-        appointment_date: bookingDate,
-        start_time: selectedSlot.start_time,
-        reason: reason.trim() ? reason.trim() : null,
-      });
-
+      const appointment = await patientService.bookAppointment(attempt);
+      bookingIdempotency.current.clear();
       setBookingSuccess(appointment);
-    } catch (err) {
-      if (axios.isAxiosError(err) && err.response?.status === 409) {
-        const detail =
-          typeof err.response.data?.detail === "string"
-            ? err.response.data.detail
-            : "The selected consultation slot is no longer available or conflicts with another appointment.";
-        setBookingError(`${detail} Available slots have been refreshed below. Please choose another slot.`);
-        // Refresh slots immediately to show latest availability
+    } catch (failure) {
+      const outcome = classifyBookingFailure(failure);
+      if (outcome === "conflict") {
+        bookingIdempotency.current.clear();
+        setSelectedSlot(null);
+        setBookingError(`${getBookingErrorMessage(failure)} Live availability has been refreshed below.`);
         await loadSlots(bookingDoctor.id, bookingDate);
+      } else if (outcome === "unknown") {
+        setUnconfirmed({ doctor: bookingDoctor, attempt });
+        setSelectedSlot(null);
+        setBookingError("We couldn't confirm whether the appointment was booked. Check status or retry safely with the same request.");
       } else {
-        setBookingError(getBookingErrorMessage(err));
+        setBookingError(getBookingErrorMessage(failure));
       }
     } finally {
+      bookingInFlight.current = false;
       setSubmitting(false);
     }
   };
 
+  async function handleRetryUnconfirmedBooking() {
+    if (!unconfirmed || bookingInFlight.current) return;
+    bookingInFlight.current = true;
+    setSubmitting(true);
+    setBookingError("");
+    try {
+      const appointment = await patientService.bookAppointment(unconfirmed.attempt);
+      bookingIdempotency.current.clear();
+      setUnconfirmed(null);
+      setBookingSuccess(appointment);
+    } catch (failure) {
+      const outcome = classifyBookingFailure(failure);
+      if (outcome === "conflict") {
+        bookingIdempotency.current.clear();
+        const doc = unconfirmed.doctor;
+        const date = unconfirmed.attempt.appointment_date;
+        setUnconfirmed(null);
+        setBookingDate(date);
+        setBookingError(`${getBookingErrorMessage(failure)} Live availability has been refreshed below.`);
+        await loadWeeklySchedule(doc.id);
+        await loadSlots(doc.id, date);
+      } else {
+        setBookingError(getBookingErrorMessage(failure));
+      }
+    } finally {
+      bookingInFlight.current = false;
+      setSubmitting(false);
+    }
+  }
+
+  async function handleCheckBooking() {
+    if (!unconfirmed || bookingInFlight.current) return;
+    bookingInFlight.current = true;
+    setSubmitting(true);
+    setBookingError("");
+    try {
+      const history = await scanPatientPages(patientService.getMyAppointments);
+      const appointment = matchBookedAttempt(history.items, unconfirmed.attempt);
+      if (appointment) {
+        bookingIdempotency.current.clear();
+        setUnconfirmed(null);
+        setBookingSuccess(appointment);
+      } else {
+        setBookingError(history.complete
+          ? "A matching booking hasn't appeared yet. You can retry safely or check Appointments again."
+          : "Only part of your appointment history could be checked. Your booking remains unconfirmed.");
+      }
+    } catch (failure) {
+      setBookingError(patientReadError(failure, "your appointments"));
+    } finally {
+      bookingInFlight.current = false;
+      setSubmitting(false);
+    }
+  }
+
   const specializations = useMemo(() => {
     return Array.from(
-      new Set(doctors.map((doctor) => doctor.specialization).filter(Boolean)),
+      new Set(visibleDoctors.map((doctor) => doctor.specialization).filter(Boolean)),
     ).sort();
-  }, [doctors]);
+  }, [visibleDoctors]);
 
   const filteredDoctors = useMemo(() => {
     const query = search.trim().toLowerCase();
 
-    return doctors.filter((doctor) => {
+    return visibleDoctors.filter((doctor) => {
       const matchesSpecialization =
         specialization === "all" ||
         doctor.specialization === specialization;
@@ -273,7 +378,7 @@ export default function FindDoctorsPage() {
 
       return matchesSpecialization && matchesSearch;
     });
-  }, [doctors, search, specialization]);
+  }, [visibleDoctors, search, specialization]);
 
   const hasFilters = Boolean(search.trim()) || specialization !== "all";
 
@@ -335,7 +440,7 @@ export default function FindDoctorsPage() {
             </div>
 
             <div className="find-doctors-count">
-              <strong>{loading || error ? "—" : doctors.length}</strong>
+              <strong>{loading || error || !directoryComplete ? "—" : visibleDoctors.length}</strong>
               <span>Available profiles</span>
             </div>
           </div>
@@ -375,10 +480,23 @@ export default function FindDoctorsPage() {
               <p>
                 {loading
                   ? "Finding available healthcare professionals..."
-                  : `${filteredDoctors.length} doctor profiles found`}
+                  : `${filteredDoctors.length} doctor profiles ${directoryComplete ? "found" : "in loaded results"}`}
               </p>
             </div>
           </div>
+
+          {unconfirmed && !bookingDoctor && (
+            <p role="status">A booking is still unconfirmed.{" "}
+              <button type="button" onClick={() => handleOpenBooking(unconfirmed.doctor)}>Check booking status</button>
+            </p>
+          )}
+
+          {!loading && !error && !directoryComplete && (
+            <div role="status">
+              <p>The doctor directory is incomplete. Search and filters cover loaded results only.</p>
+              <button type="button" onClick={() => setDirectoryRevision((value) => value + 1)}>Retry directory</button>
+            </div>
+          )}
 
           {loading ? (
             <div className="find-doctors-state">
@@ -396,7 +514,7 @@ export default function FindDoctorsPage() {
               <button
                 type="button"
                 className="find-doctors-retry"
-                onClick={() => window.location.reload()}
+                onClick={() => setDirectoryRevision((value) => value + 1)}
               >
                 Try again
               </button>
@@ -412,8 +530,10 @@ export default function FindDoctorsPage() {
               </span>
 
               <h3>
-                {hasFilters
-                  ? "No matching doctors found"
+                {!directoryComplete
+                  ? "No matching doctors in loaded results"
+                  : hasFilters
+                    ? "No matching doctors found"
                   : "No verified doctors available yet"}
               </h3>
 
@@ -535,7 +655,7 @@ export default function FindDoctorsPage() {
               }
             }}
           >
-            <div className="booking-modal">
+            <div className="booking-modal" ref={bookingModalRef} tabIndex={-1}>
               <button
                 type="button"
                 className="booking-modal-close"
@@ -546,7 +666,27 @@ export default function FindDoctorsPage() {
                 <X size={20} />
               </button>
 
-              {bookingSuccess ? (
+              {unconfirmed ? (
+                <div className="booking-modal-header">
+                  <h2 id="booking-modal-title">Booking unconfirmed</h2>
+                  <p role="status">{bookingError || "Check your appointments before making another booking."}</p>
+                  <div className="booking-modal-actions">
+                    <Link to="/patient/appointments" className="booking-btn-secondary">View appointments</Link>
+                    <button
+                      type="button"
+                      className="booking-btn-secondary"
+                      disabled={submitting}
+                      onClick={() => void handleRetryUnconfirmedBooking()}
+                    >
+                      {submitting ? "Retrying…" : "Retry booking"}
+                    </button>
+                    <button type="button" className="booking-btn-primary" disabled={submitting}
+                      onClick={() => void handleCheckBooking()}>
+                      {submitting ? "Checking…" : "Check booking status"}
+                    </button>
+                  </div>
+                </div>
+              ) : bookingSuccess ? (
                 <div className="booking-modal-success">
                   <div className="booking-success-icon">
                     <CheckCircle2 size={48} />
@@ -556,10 +696,10 @@ export default function FindDoctorsPage() {
                   <h2 id="booking-modal-title">Consultation scheduled successfully</h2>
 
                   <p className="booking-success-summary">
-                    Your consultation with <strong>Dr. {bookingDoctor.full_name}</strong> is booked
+                    Your consultation with <strong>{formatDoctorHeading(bookingDoctor.full_name)}</strong> is booked
                     for <strong>{formatDisplayDate(bookingSuccess.appointment_date)}</strong> at{" "}
                     <strong>
-                      {formatTime(bookingSuccess.start_time)} – {formatTime(bookingSuccess.end_time)}
+                      {formatAppointmentTime(bookingSuccess.start_time)} – {formatAppointmentTime(bookingSuccess.end_time)} IST
                     </strong>.
                   </p>
 
@@ -628,20 +768,63 @@ export default function FindDoctorsPage() {
                     </div>
                   )}
 
+                  <div className="booking-weekly-schedule">
+                    <div className="booking-weekly-header">
+                      <span className="booking-label">
+                        <span>Weekly consulting hours</span>
+                        <small>Recurring schedule (IST)</small>
+                      </span>
+                    </div>
+
+                    {loadingWeeklySchedule ? (
+                      <div className="weekly-schedule-loading">
+                        <Loader2 size={14} className="spinner" />
+                        <span>Loading weekly consulting hours...</span>
+                      </div>
+                    ) : weeklyScheduleError ? (
+                      <p className="weekly-schedule-note">{weeklyScheduleError}</p>
+                    ) : weeklySchedule.length === 0 ? (
+                      <p className="weekly-schedule-note">
+                        No recurring weekly schedule is currently published for this practitioner.
+                      </p>
+                    ) : (
+                      <div className="weekly-schedule-list">
+                        {weeklySchedule.map((entry) => (
+                          <div
+                            key={`${entry.weekday}-${entry.timeRange}`}
+                            className="weekly-schedule-item"
+                          >
+                            <strong>{entry.shortDay}</strong>
+                            <span>{entry.timeRange}</span>
+                            <small>{entry.slotDurationMinutes}m slots</small>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                    <p className="weekly-schedule-disclaimer">
+                      Weekly hours reflect regular consulting shifts and do not guarantee open slots. Pick a date below to view real-time availability.
+                    </p>
+                  </div>
+
                   <div className="booking-field-group">
                     <label htmlFor="booking-date-input" className="booking-label">
                       <span>1. Select consultation date</span>
-                      <small>Tomorrow onwards (up to 60 days)</small>
+                      <small>Today onwards (up to 60 days, Asia/Kolkata)</small>
                     </label>
                     <input
                       id="booking-date-input"
                       type="date"
                       className="booking-date-input"
                       value={bookingDate}
-                      min={getTomorrowString()}
+                      min={getTodayString()}
                       max={getMaxDateString()}
                       disabled={submitting}
-                      onChange={(e) => setBookingDate(e.target.value)}
+                      onChange={(e) => {
+                        const date = e.target.value;
+                        setBookingDate(date);
+                        setBookingError("");
+                        void loadSlots(bookingDoctor.id, date);
+                      }}
                       required
                     />
                   </div>
@@ -649,7 +832,7 @@ export default function FindDoctorsPage() {
                   <div className="booking-field-group">
                     <div className="booking-slots-header">
                       <label className="booking-label">
-                        <span>2. Select available 30-min time slot</span>
+                        <span>2. Select an available time (IST)</span>
                         {slots.length > 0 && (
                           <span className="slots-count">{slots.length} available</span>
                         )}
@@ -692,17 +875,31 @@ export default function FindDoctorsPage() {
                               type="button"
                               key={slot.start_time}
                               className={`slot-chip ${isSelected ? "selected" : ""}`}
+                              aria-pressed={isSelected}
                               onClick={() => setSelectedSlot(slot)}
                               disabled={submitting}
                             >
                               <Clock3 size={14} />
-                              <span>{formatTime(slot.start_time)} – {formatTime(slot.end_time)}</span>
+                              <span>{formatAppointmentTime(slot.start_time)} – {formatAppointmentTime(slot.end_time)}</span>
                             </button>
                           );
                         })}
                       </div>
                     )}
                   </div>
+
+                  {selectedSlot && (
+                    <div className="booking-selection-summary" role="status">
+                      <CheckCircle2 size={16} />
+                      <span>
+                        Selected: <strong>{formatDisplayDate(bookingDate)}</strong> ·{" "}
+                        <strong>
+                          {formatAppointmentTime(selectedSlot.start_time)} –{" "}
+                          {formatAppointmentTime(selectedSlot.end_time)} IST
+                        </strong>
+                      </span>
+                    </div>
+                  )}
 
                   <div className="booking-field-group">
                     <label htmlFor="booking-reason" className="booking-label">
@@ -734,7 +931,7 @@ export default function FindDoctorsPage() {
                     <button
                       type="submit"
                       className="booking-btn-primary"
-                      disabled={submitting || !selectedSlot}
+                      disabled={submitting || loadingSlots || !selectedSlot}
                     >
                       {submitting ? (
                         <>

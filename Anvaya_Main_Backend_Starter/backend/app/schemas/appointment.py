@@ -26,6 +26,10 @@ class AppointmentCreate(BaseModel):
         default=None,
         max_length=3000,
     )
+    idempotency_key: str | None = Field(
+        default=None,
+        max_length=255,
+    )
 
     @field_validator("appointment_date")
     @classmethod
@@ -91,6 +95,9 @@ class AppointmentRead(BaseModel):
     status: Literal["booked", "cancelled", "completed"]
     reason: str | None
     revision: int = 0
+    doctor_name: str | None = None
+    doctor_specialization: str | None = None
+    doctor_clinic_name: str | None = None
     created_at: datetime
     updated_at: datetime
 
@@ -112,6 +119,15 @@ class DoctorAppointmentListResponse(BaseModel):
     total: int
     limit: int
     offset: int
+
+
+class DoctorAppointmentSummaryResponse(BaseModel):
+    total: int
+    today_count: int
+    upcoming_count: int
+    past_due_count: int
+    completed_count: int
+    cancelled_count: int
 
 
 class AvailableSlotRead(BaseModel):

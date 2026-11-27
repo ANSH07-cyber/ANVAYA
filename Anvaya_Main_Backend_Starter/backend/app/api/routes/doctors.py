@@ -14,7 +14,7 @@ from fastapi import (
 from sqlalchemy import case, func, select
 from sqlalchemy.orm import Session
 
-from app.api.deps import require_roles
+from app.api.deps import require_roles, verify_csrf_and_origin
 from app.db.session import get_db
 from app.schemas.appointment import AvailableSlotsResponse
 from app.models.appointment import Appointment
@@ -109,6 +109,7 @@ def update_my_doctor_profile(
     payload: DoctorProfileUpdate,
     current_user: User = Depends(require_roles("doctor")),
     db: Session = Depends(get_db),
+    _csrf: None = Depends(verify_csrf_and_origin),
 ) -> DoctorProfileMeRead:
     """
     Update permitted professional profile fields for the authenticated doctor.
